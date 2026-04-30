@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>gaya — Pack Preview</title>
+    <link rel="stylesheet" href="./preview.css" />
+    <!-- lottie-web UMD player (same vendor copy as the mascot window). Optional;
+         absence only breaks lottie packs. -->
+    <script src="./vendor/lottie.min.js"></script>
+    <!-- Shared MascotRenderer classes (SvgRenderer / ImageRenderer / LottieRenderer). -->
+    <script src="./pack-renderer.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="title">Pack Preview</div>
+      <div class="topbar-status" id="status"></div>
+    </header>
+
+    <main class="layout">
+      <!-- ============== Left: Pack list ============== -->
+      <section class="pane pane-left">
+        <div class="pane-header">
+          <span class="pane-title">Packs</span>
+          <button class="btn" id="btn-reload" title="Rescan packs">Reload</button>
+        </div>
+        <ul class="pack-list" id="pack-list"></ul>
+        <div class="left-footer">
+          <button class="btn" id="btn-open-dir" disabled>Open Dir</button>
+          <span class="validate-pill" id="validate-pill" data-status="unknown">—</span>
+        </div>
+      </section>
+
+      <!-- ============== Center: Stage ============== -->
+      <section class="pane pane-center">
+        <div class="pane-header">
+          <span class="pane-title">Stage</span>
+        </div>
+        <div class="stage-controls">
+          <fieldset class="ctl">
+            <legend>Background</legend>
+            <label><input type="radio" name="bg" value="transparent" checked> Transparent</label>
+            <label><input type="radio" name="bg" value="checker"> Checker</label>
+            <label><input type="radio" name="bg" value="light"> Light</label>
+            <label><input type="radio" name="bg" value="dark"> Dark</label>
+          </fieldset>
+          <fieldset class="ctl">
+            <legend>Guides</legend>
+            <label><input type="checkbox" id="guide-bubble"> Bubble anchor</label>
+            <label><input type="checkbox" id="guide-label"> Session label</label>
+            <label><input type="checkbox" id="guide-frame"> ViewBox / size</label>
+            <label><input type="checkbox" id="guide-floor"> Floor line</label>
+          </fieldset>
+        </div>
+        <div class="stage-wrap">
+          <div class="stage-window" id="stage-window" data-bg="transparent">
+            <div class="stage" id="stage">
+              <div class="mascot-wrap" id="mascot-wrap">
+                <div class="bubble" id="bubble" data-anchor="top-right">
+                  <span class="bubble-text" id="bubble-text">待機中</span>
+                  <span class="bubble-tail" aria-hidden="true"></span>
+                </div>
+                <div class="session-label" id="session-label" hidden></div>
+              </div>
+              <!-- Guide overlays: rendered above the mascot, pointer-events: none. -->
+              <div class="guides" id="guides"></div>
+            </div>
+          </div>
+        </div>
+        <div class="state-controls">
+          <fieldset class="ctl ctl-states">
+            <legend>Base state</legend>
+            <div class="state-row" id="row-base"></div>
+          </fieldset>
+          <fieldset class="ctl ctl-states">
+            <legend>Overlay</legend>
+            <div class="state-row" id="row-overlay"></div>
+          </fieldset>
+          <div class="auto-row">
+            <button class="btn" id="btn-autoplay">Auto-play base</button>
+            <button class="btn" id="btn-overlay-seq">Overlay seq</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============== Right: Inspector ============== -->
+      <section class="pane pane-right">
+        <div class="pane-header">
+          <span class="pane-title">Inspector</span>
+        </div>
+        <div class="inspector">
+          <details open>
+            <summary>Manifest</summary>
+            <pre class="json" id="ins-manifest">—</pre>
+          </details>
+          <details open>
+            <summary>States</summary>
+            <ul class="ins-list" id="ins-states"></ul>
+          </details>
+          <details>
+            <summary>Files</summary>
+            <ul class="ins-list" id="ins-files"></ul>
+          </details>
+          <details open>
+            <summary>Errors</summary>
+            <ul class="ins-list" id="ins-errors"></ul>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" hidden></div>
+
+    <script src="./preview.js"></script>
+  </body>
+</html>

@@ -1,0 +1,469 @@
+/* Pack preview window styles. Lives next to styles.css but is window-scoped:
+   the .stage-window block is the only place where the runtime mascot styles
+   apply (we replicate just enough of styles.css inside that scope). */
+
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --border: #d8dde5;
+  --text: #1c2128;
+  --muted: #6b7280;
+  --accent: #2a6df4;
+  --accent-soft: #e5edff;
+  --ok: #1f9d55;
+  --err: #c32424;
+  --warn: #b76b00;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1d2027;
+    --panel: #262a32;
+    --border: #3a3f49;
+    --text: #e8e9ec;
+    --muted: #9aa0aa;
+    --accent: #6c9bff;
+    --accent-soft: #2a3a5e;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  font-size: 13px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  height: 38px;
+}
+.topbar .title { font-weight: 600; }
+.topbar-status { color: var(--muted); font-size: 12px; }
+
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr 320px;
+  gap: 0;
+  height: calc(100vh - 38px);
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+.pane:last-child { border-right: 0; }
+
+.pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+.pane-title { font-weight: 600; }
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn:hover { background: var(--accent-soft); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ---- Left pane ---- */
+.pack-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  flex: 1;
+  overflow-y: auto;
+}
+.pack-list li {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  display: flex;
+  flex-direction: column;
+}
+.pack-list li:hover { background: var(--accent-soft); }
+.pack-list li.selected {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+.pack-list .pack-name { font-weight: 600; }
+.pack-list .pack-id { color: var(--muted); font-size: 11px; font-family: var(--mono); }
+
+.left-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  gap: 8px;
+}
+
+.validate-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.validate-pill[data-status="ok"] { color: var(--ok); border-color: var(--ok); }
+.validate-pill[data-status="error"] { color: var(--err); border-color: var(--err); }
+.validate-pill[data-status="warn"] { color: var(--warn); border-color: var(--warn); }
+
+/* ---- Center pane ---- */
+.pane-center { background: var(--bg); }
+.stage-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+.ctl {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px 8px;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  background: var(--panel);
+}
+.ctl legend { padding: 0 4px; color: var(--muted); font-size: 11px; }
+.ctl label { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; cursor: pointer; }
+
+.stage-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: auto;
+}
+/* The stage-window mimics the mascot BrowserWindow at its real 280x240 size.
+   The four background variants are stacked here so the user can see how the
+   pack reads against transparent / checker / light / dark backdrops. */
+.stage-window {
+  position: relative;
+  width: 280px;
+  height: 240px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  background: transparent;
+  /* desktop hint when transparent: faint outline */
+}
+.stage-window[data-bg="transparent"] {
+  background:
+    linear-gradient(45deg, transparent 49%, rgba(0,0,0,0.06) 50%, transparent 51%);
+  background-color: transparent;
+}
+.stage-window[data-bg="checker"] {
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #ddd 25%, transparent 25%),
+    linear-gradient(-45deg, #ddd 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ddd 75%),
+    linear-gradient(-45deg, transparent 75%, #ddd 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+.stage-window[data-bg="light"] { background: #f4f5f7; }
+.stage-window[data-bg="dark"]  { background: #1a1d22; }
+
+/* ---- Replicated mascot styles inside .stage-window ----
+   These mirror styles.css for the mascot window so packs render identically
+   in the preview without affecting any preview-window chrome. */
+.stage-window .stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 8px;
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  color: #222;
+}
+.stage-window .mascot-wrap {
+  width: 200px;
+  height: 200px;
+  position: relative;
+}
+.stage-window .mascot {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.stage-window .mascot-wrap.facing-left .mascot {
+  transform: scaleX(-1);
+  transform-origin: 50% 50%;
+}
+.stage-window .bubble {
+  position: absolute;
+  top: 0;
+  left: 105px;
+  right: auto;
+  bottom: auto;
+  max-width: 130px;
+  padding: 8px 12px;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  border-radius: 14px;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.22));
+  pointer-events: none;
+  z-index: 5;
+  transition: opacity 240ms ease;
+  opacity: 1;
+}
+.stage-window .bubble-text {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.stage-window .bubble.is-idle { opacity: 0.65; }
+.stage-window .bubble.is-hidden { opacity: 0; }
+.stage-window .bubble[data-anchor="top-right"] { top: 0; left: 105px; right: auto; bottom: auto; }
+.stage-window .bubble[data-anchor="top-left"]  { top: 0; right: 105px; left: auto; bottom: auto; }
+.stage-window .bubble[data-anchor="top"] {
+  top: -8px; left: 50%; right: auto; bottom: auto; transform: translateX(-50%);
+}
+.stage-window .bubble-tail {
+  position: absolute;
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 8px solid #ffffff;
+  border-bottom: 0;
+}
+.stage-window .bubble[data-anchor="top-right"] .bubble-tail { bottom: -7px; left: 18px; }
+.stage-window .bubble[data-anchor="top-left"]  .bubble-tail { bottom: -7px; right: 18px; }
+.stage-window .bubble[data-anchor="top"] .bubble-tail {
+  bottom: -7px; left: 50%; transform: translateX(-50%);
+}
+.stage-window .session-label {
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 180px;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #444;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.3;
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.18));
+  pointer-events: none;
+  z-index: 2;
+}
+.stage-window .session-label[hidden] { display: none; }
+
+/* ---- Guide overlays ---- */
+.guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+.guide {
+  position: absolute;
+  pointer-events: none;
+}
+/* Floor line: y where the mascot stands inside the stage-window. The runtime
+   pins the mascot to the bottom of the stage with padding-bottom:8 + a 200px
+   wrap, so the visual floor is at stage_height - 8 = 232 from the top. */
+.guide-floor {
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(220, 60, 60, 0.85);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.3);
+}
+.guide-floor::after {
+  content: 'floor';
+  position: absolute;
+  right: 4px;
+  top: -14px;
+  font-size: 10px;
+  font-family: var(--mono);
+  color: rgba(220, 60, 60, 0.95);
+}
+.guide-frame {
+  outline: 1px dashed rgba(40, 110, 240, 0.85);
+  background: transparent;
+}
+.guide-frame::after {
+  content: attr(data-label);
+  position: absolute;
+  top: -16px;
+  left: 0;
+  font-size: 10px;
+  font-family: var(--mono);
+  color: rgba(40, 110, 240, 0.95);
+}
+.guide-bubble-anchor {
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  margin-top: -7px;
+  border: 2px solid rgba(180, 60, 200, 0.95);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+}
+.guide-bubble-anchor::before,
+.guide-bubble-anchor::after {
+  content: '';
+  position: absolute;
+  background: rgba(180, 60, 200, 0.85);
+}
+.guide-bubble-anchor::before {
+  left: -8px; right: -8px; top: 50%; height: 1px;
+}
+.guide-bubble-anchor::after {
+  top: -8px; bottom: -8px; left: 50%; width: 1px;
+}
+.guide-label {
+  border: 1px dashed rgba(40, 160, 80, 0.9);
+  background: rgba(40, 160, 80, 0.12);
+}
+
+/* ---- State controls ---- */
+.state-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+.state-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.state-row .seg {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.state-row .seg.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.auto-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ---- Right pane / inspector ---- */
+.inspector {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px 16px;
+}
+.inspector details {
+  border-top: 1px solid var(--border);
+  padding: 6px 0;
+}
+.inspector details:first-child { border-top: 0; }
+.inspector summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 4px 0;
+}
+.json {
+  margin: 4px 0 0;
+  padding: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 220px;
+  overflow: auto;
+}
+.ins-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.ins-list li {
+  padding: 3px 4px;
+  border-bottom: 1px dotted var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ins-list li:last-child { border-bottom: 0; }
+.ins-list li.error { color: var(--err); }
+.ins-list li.warn  { color: var(--warn); }
+.ins-list li.ok    { color: var(--ok); }
+.ins-list li .meta { color: var(--muted); }
+
+.toast {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  background: rgba(30, 30, 30, 0.92);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 12px;
+  z-index: 100;
+}
+.toast[hidden] { display: none; }

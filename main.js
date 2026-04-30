@@ -6,7 +6,7 @@
 // and routes each update to the right window. A built-in `__default__`
 // session always exists so older curl tests (no session_id) keep working.
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, shell } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const http = require('node:http');
@@ -1017,6 +1017,7 @@ function rebuildTrayMenu() {
     { label: `gaya (port ${boundPort ?? '—'})`, enabled: false },
     { type: 'separator' },
     { label: 'Character', submenu: characterSubmenu },
+    { label: 'Pack Preview…', click: () => openPreviewWindow() },
     { label: 'Movement', submenu: movementSubmenu },
     { label: 'Reset Position', click: () => resetAllWindowPositions() },
     {
@@ -1322,4 +1323,266 @@ ipcMain.handle('pack:load', async (_event, id) => {
     console.error(`[gaya] pack:load failed for '${id}':`, err);
     throw err;
   }
+});
+
+// ---- Pack preview window ----
+
+let previewWindow = null;
+// Per-window WeakMap of pack-id -> { watcher, debounceTimer, refCount }. Cleaned up
+// on window close. WeakMap key is the BrowserWindow instance; the value is a Map
+// because a single preview window may watch multiple packs over its lifetime
+// (we keep the previous one alive briefly during pack switch).
+const packWatchersByWindow = new WeakMap();
+
+function getOrCreateWatchersForWindow(win) {
+  let map = packWatchersByWindow.get(win);
+  if (!map) {
+    map = new Map();
+    packWatchersByWindow.set(win, map);
+  }
+  return map;
+}
+
+function startPackWatcher(win, packId) {
+  if (typeof packId !== 'string' || !PACK_ID_RE.test(packId)) return;
+  const watchers = getOrCreateWatchersForWindow(win);
+  const existing = watchers.get(packId);
+  if (existing) {
+    existing.refCount += 1;
+    return;
+  }
+  const dir = path.join(CHARACTERS_DIR, packId);
+  let watcher;
+  try {
+    watcher = fs.watch(dir, { recursive: true }, () => {
+      const entry = watchers.get(packId);
+      if (!entry) return;
+      if (entry.debounceTimer) clearTimeout(entry.debounceTimer);
+      entry.debounceTimer = setTimeout(() => {
+        entry.debounceTimer = null;
+        if (!win || win.isDestroyed()) return;
+        win.webContents.send('preview:pack-changed', { packId });
+      }, 150);
+    });
+  } catch (err) {
+    console.warn(`[gaya] failed to watch pack '${packId}':`, err.message);
+    return;
+  }
+  watchers.set(packId, { watcher, debounceTimer: null, refCount: 1 });
+}
+
+function stopPackWatcher(win, packId) {
+  const watchers = packWatchersByWindow.get(win);
+  if (!watchers) return;
+  const entry = watchers.get(packId);
+  if (!entry) return;
+  entry.refCount -= 1;
+  if (entry.refCount > 0) return;
+  if (entry.debounceTimer) clearTimeout(entry.debounceTimer);
+  try { entry.watcher.close(); } catch {}
+  watchers.delete(packId);
+}
+
+function stopAllPackWatchersForWindow(win) {
+  const watchers = packWatchersByWindow.get(win);
+  if (!watchers) return;
+  for (const [, entry] of watchers) {
+    if (entry.debounceTimer) clearTimeout(entry.debounceTimer);
+    try { entry.watcher.close(); } catch {}
+  }
+  watchers.clear();
+  packWatchersByWindow.delete(win);
+}
+
+function openPreviewWindow() {
+  if (previewWindow && !previewWindow.isDestroyed()) {
+    if (previewWindow.isMinimized()) previewWindow.restore();
+    previewWindow.show();
+    previewWindow.focus();
+    return previewWindow;
+  }
+  previewWindow = new BrowserWindow({
+    width: 1000,
+    height: 640,
+    minWidth: 820,
+    minHeight: 540,
+    title: 'gaya — Pack Preview',
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  previewWindow.removeMenu();
+  previewWindow.loadFile(path.join(__dirname, 'renderer', 'preview.html'));
+  previewWindow.once('ready-to-show', () => {
+    if (previewWindow && !previewWindow.isDestroyed()) previewWindow.show();
+  });
+  previewWindow.on('closed', () => {
+    if (previewWindow) stopAllPackWatchersForWindow(previewWindow);
+    previewWindow = null;
+  });
+  return previewWindow;
+}
+
+ipcMain.handle('preview:open', () => {
+  openPreviewWindow();
+  return true;
+});
+
+ipcMain.handle('preview:reveal', (_event, id) => {
+  if (typeof id !== 'string' || !PACK_ID_RE.test(id)) {
+    return { ok: false, error: 'invalid pack id' };
+  }
+  const dir = path.join(CHARACTERS_DIR, id);
+  shell.openPath(dir);
+  return { ok: true };
+});
+
+ipcMain.handle('preview:validate', async (_event, id) => {
+  const result = { ok: true, errors: [], warnings: [], files: [] };
+  if (typeof id !== 'string' || !PACK_ID_RE.test(id)) {
+    result.ok = false;
+    result.errors.push('invalid pack id');
+    return result;
+  }
+  const dir = path.join(CHARACTERS_DIR, id);
+  let manifest = null;
+  try {
+    const raw = await fs.promises.readFile(path.join(dir, 'manifest.json'), 'utf8');
+    manifest = JSON.parse(raw);
+  } catch (err) {
+    result.ok = false;
+    result.errors.push(`manifest.json: ${err.message}`);
+    return result;
+  }
+
+  if (!manifest || typeof manifest !== 'object') {
+    result.ok = false;
+    result.errors.push('manifest is not an object');
+    return result;
+  }
+  if (!manifest.id || typeof manifest.id !== 'string') {
+    result.errors.push('manifest.id missing or not a string');
+  } else if (manifest.id !== id) {
+    result.warnings.push(`manifest.id '${manifest.id}' does not match folder '${id}'`);
+  }
+  if (manifest.name && typeof manifest.name !== 'string') {
+    result.errors.push('manifest.name must be a string');
+  }
+  const rendererType = manifest.renderer || 'svg';
+  if (!VALID_RENDERERS.has(rendererType)) {
+    result.errors.push(`unknown renderer '${rendererType}'`);
+  }
+  if (manifest.bubble && typeof manifest.bubble === 'object') {
+    const allowed = ['top-right', 'top-left', 'top'];
+    if (manifest.bubble.anchor && !allowed.includes(manifest.bubble.anchor)) {
+      result.warnings.push(`bubble.anchor '${manifest.bubble.anchor}' is not one of ${allowed.join('/')}`);
+    }
+  }
+  if (manifest.size && typeof manifest.size === 'object') {
+    const w = manifest.size.width;
+    const h = manifest.size.height;
+    if (typeof w === 'number' && typeof h === 'number') {
+      if (w !== 200 || h !== 200) {
+        result.warnings.push(`size ${w}x${h} differs from layout default 200x200`);
+      }
+    }
+  }
+  if (rendererType === 'svg' && manifest.viewBox && typeof manifest.viewBox !== 'string') {
+    result.errors.push('viewBox must be a string');
+  }
+
+  if (rendererType === 'svg') {
+    try {
+      await fs.promises.access(path.join(dir, 'mascot.svg'), fs.constants.R_OK);
+    } catch {
+      result.errors.push('mascot.svg is missing or unreadable');
+    }
+  }
+
+  if (rendererType === 'image' || rendererType === 'lottie') {
+    const states = (manifest.states && typeof manifest.states === 'object') ? manifest.states : {};
+    if (!Object.keys(states).length) {
+      result.errors.push(`renderer '${rendererType}' requires manifest.states map`);
+    }
+    const fallback = manifest.fallbackState || 'idle';
+    if (!states[fallback]) {
+      result.warnings.push(`fallbackState '${fallback}' not in manifest.states`);
+    }
+    for (const [stateName, relPath] of Object.entries(states)) {
+      const abs = resolvePackAsset(dir, relPath);
+      if (!abs) {
+        result.errors.push(`state '${stateName}' has unsafe path '${relPath}'`);
+        continue;
+      }
+      try {
+        await fs.promises.access(abs, fs.constants.R_OK);
+      } catch {
+        result.errors.push(`state '${stateName}' file missing: ${relPath}`);
+      }
+    }
+  }
+
+  // pack.css: optional. If present, do a very-light syntactic sanity check
+  // (balanced braces). Real CSS parse errors will surface in the renderer.
+  try {
+    const css = await fs.promises.readFile(path.join(dir, 'pack.css'), 'utf8');
+    let depth = 0;
+    for (const ch of css) {
+      if (ch === '{') depth += 1;
+      else if (ch === '}') depth -= 1;
+      if (depth < 0) break;
+    }
+    if (depth !== 0) {
+      result.errors.push('pack.css has unbalanced { } braces');
+    }
+  } catch (err) {
+    if (err && err.code !== 'ENOENT') {
+      result.warnings.push(`pack.css unreadable: ${err.message}`);
+    }
+  }
+
+  // File listing (one level + states/lottie subdirs).
+  try {
+    const top = await fs.promises.readdir(dir, { withFileTypes: true });
+    for (const ent of top) {
+      const full = path.join(dir, ent.name);
+      if (ent.isFile()) {
+        try {
+          const st = await fs.promises.stat(full);
+          result.files.push({ path: ent.name, size: st.size });
+        } catch {}
+      } else if (ent.isDirectory()) {
+        try {
+          const inner = await fs.promises.readdir(full, { withFileTypes: true });
+          for (const sub of inner) {
+            if (!sub.isFile()) continue;
+            const subFull = path.join(full, sub.name);
+            try {
+              const st = await fs.promises.stat(subFull);
+              result.files.push({ path: `${ent.name}/${sub.name}`, size: st.size });
+            } catch {}
+          }
+        } catch {}
+      }
+    }
+  } catch {}
+
+  if (result.errors.length) result.ok = false;
+  return result;
+});
+
+ipcMain.on('pack:watch', (event, packId) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return;
+  startPackWatcher(win, packId);
+});
+
+ipcMain.on('pack:unwatch', (event, packId) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return;
+  stopPackWatcher(win, packId);
 });

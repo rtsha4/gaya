@@ -19,4 +19,30 @@ contextBridge.exposeInMainWorld('api', {
   // under sandbox:true on file:// is blocked.
   listPacks: () => ipcRenderer.invoke('pack:list'),
   loadPack: (id) => ipcRenderer.invoke('pack:load', id),
+
+  // ---- Pack Preview window bridge ----
+  // The preview window (renderer/preview.html) uses these to drive the
+  // pack-author UI. openWindow is also exposed here so the mascot window
+  // could open the preview later if we ever want a renderer-side trigger.
+  preview: {
+    openWindow: () => ipcRenderer.invoke('preview:open'),
+    listPacks: () => ipcRenderer.invoke('pack:list'),
+    loadPack: (id) => ipcRenderer.invoke('pack:load', id),
+    revealInFinder: (id) => ipcRenderer.invoke('preview:reveal', id),
+    validatePack: (id) => ipcRenderer.invoke('preview:validate', id),
+    // Subscribe to filesystem-driven pack reload notifications. Returns an
+    // unsubscribe function. The main process is responsible for ensuring
+    // the watcher is alive for the requested packId.
+    watchPack: (packId, cb) => {
+      ipcRenderer.send('pack:watch', packId);
+      const listener = (_event, payload) => {
+        if (payload && payload.packId === packId) cb(payload);
+      };
+      ipcRenderer.on('preview:pack-changed', listener);
+      return () => {
+        ipcRenderer.removeListener('preview:pack-changed', listener);
+        ipcRenderer.send('pack:unwatch', packId);
+      };
+    },
+  },
 });
