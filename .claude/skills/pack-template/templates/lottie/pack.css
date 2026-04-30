@@ -1,0 +1,9 @@
+/* =============================================================
+   __PACK_NAME__ pack (lottie renderer)
+   Animation lives inside each Lottie JSON. This stylesheet is
+   only for light wrapper tweaks (drop-shadow, etc).
+   ============================================================= */
+
+.mascot[data-pack="__PACK_ID__"].lottie-host {
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.15));
+}

@@ -1,0 +1,17 @@
+/* =============================================================
+   __PACK_NAME__ pack (image renderer)
+   The renderer creates a single <img class="mascot" data-pack="__PACK_ID__">
+   and swaps src on state change. Use this stylesheet only for light
+   tweaks like filters or drop-shadows; main animation must live in
+   the image files themselves (GIF / APNG).
+   ============================================================= */
+
+.mascot[data-pack="__PACK_ID__"] {
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.15));
+  transition: filter 200ms ease;
+}
+
+/* Example state-specific tweak: tint when erroring */
+.mascot[data-pack="__PACK_ID__"].state-error {
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.15)) hue-rotate(-25deg);
+}

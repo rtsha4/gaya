@@ -1,0 +1,25 @@
+{
+  "id": "__PACK_ID__",
+  "name": "__PACK_NAME__",
+  "version": "0.1.0",
+  "renderer": "image",
+  "size": { "width": 200, "height": 200 },
+  "bubble": {
+    "anchor": "__BUBBLE_ANCHOR__",
+    "offsetX": -8,
+    "offsetY": -6
+  },
+  "defaultState": "idle",
+  "fallbackState": "idle",
+  "states": {
+    "idle":     "states/idle.gif",
+    "thinking": "states/thinking.gif",
+    "working":  "states/working.gif",
+    "waiting":  "states/waiting.gif",
+    "done":     "states/done.gif",
+    "error":    "states/error.gif",
+    "dragging": "states/dragging.gif",
+    "falling":  "states/falling.gif",
+    "landed":   "states/landed.png"
+  }
+}

@@ -1,0 +1,78 @@
+<svg class="mascot" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Floor shadow -->
+  <ellipse class="shadow" cx="100" cy="178" rx="46" ry="6" />
+
+  <!-- Body group: breathing / squash / dragging deformations apply here -->
+  <g class="body-group">
+    <!-- Body -->
+    <circle class="body" cx="100" cy="108" r="58" />
+
+    <!-- Default eyes -->
+    <g class="eyes">
+      <circle class="eye eye-l" cx="82" cy="100" r="5" />
+      <circle class="eye eye-r" cx="118" cy="100" r="5" />
+    </g>
+
+    <!-- Surprise eyes (dragging / waiting) -->
+    <g class="eyes-surprise">
+      <circle class="eye-o eye-o-l" cx="82" cy="100" r="7" />
+      <circle class="eye-o eye-o-r" cx="118" cy="100" r="7" />
+    </g>
+
+    <!-- Sad eyes (error) -->
+    <g class="eyes-sad">
+      <path class="eye-sad eye-sad-l" d="M76 102 L88 96" />
+      <path class="eye-sad eye-sad-r" d="M112 96 L124 102" />
+    </g>
+
+    <!-- Closed eyes (landed / done peak) -->
+    <g class="eyes-closed">
+      <path class="eye-line eye-line-l" d="M76 100 L88 100" />
+      <path class="eye-line eye-line-r" d="M112 100 L124 100" />
+    </g>
+
+    <!-- Default mouth -->
+    <path class="mouth" d="M88 122 Q100 130 112 122" />
+
+    <!-- Open mouth (dragging) -->
+    <ellipse class="mouth-o" cx="100" cy="124" rx="6" ry="8" />
+
+    <!-- Smile (done) -->
+    <path class="mouth-smile" d="M84 120 Q100 138 116 120" />
+
+    <!-- Frown (error) -->
+    <path class="mouth-frown" d="M88 130 Q100 122 112 130" />
+  </g>
+
+  <!-- Thinking "?" -->
+  <g class="think">
+    <circle class="think-bg" cx="148" cy="58" r="14" />
+    <text class="think-mark" x="148" y="64" text-anchor="middle">?</text>
+  </g>
+
+  <!-- Working gear -->
+  <g class="work">
+    <g class="work-gear" transform="translate(150 56)">
+      <path d="M0 -10 L3 -3 L10 0 L3 3 L0 10 L-3 3 L-10 0 L-3 -3 Z" />
+      <circle r="3" />
+    </g>
+  </g>
+
+  <!-- Waiting "!" -->
+  <g class="bang">
+    <circle class="bang-bg" cx="148" cy="58" r="14" />
+    <text class="bang-mark" x="148" y="64" text-anchor="middle">!</text>
+  </g>
+
+  <!-- Done sparkles -->
+  <g class="celebrate">
+    <path class="spark spark-1" d="M52 60 L56 66 L62 68 L56 70 L52 76 L48 70 L42 68 L48 66 Z" />
+    <path class="spark spark-2" d="M148 100 L151 105 L156 106 L151 107 L148 112 L145 107 L140 106 L145 105 Z" />
+    <path class="spark spark-3" d="M36 124 L39 129 L44 130 L39 131 L36 136 L33 131 L28 130 L33 129 Z" />
+  </g>
+
+  <!-- Error tear -->
+  <g class="tear">
+    <ellipse class="tear-drop" cx="82" cy="118" rx="3" ry="5" />
+  </g>
+</svg>

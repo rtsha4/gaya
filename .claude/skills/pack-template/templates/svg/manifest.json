@@ -1,0 +1,14 @@
+{
+  "id": "__PACK_ID__",
+  "name": "__PACK_NAME__",
+  "version": "0.1.0",
+  "renderer": "svg",
+  "viewBox": "0 0 200 200",
+  "size": { "width": 200, "height": 200 },
+  "bubble": {
+    "anchor": "__BUBBLE_ANCHOR__",
+    "offsetX": -8,
+    "offsetY": -6
+  },
+  "defaultState": "idle"
+}

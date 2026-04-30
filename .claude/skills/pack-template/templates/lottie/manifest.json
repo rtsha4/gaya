@@ -1,0 +1,22 @@
+{
+  "id": "__PACK_ID__",
+  "name": "__PACK_NAME__",
+  "version": "0.1.0",
+  "renderer": "lottie",
+  "size": { "width": 200, "height": 200 },
+  "bubble": {
+    "anchor": "__BUBBLE_ANCHOR__",
+    "offsetX": -8,
+    "offsetY": -6
+  },
+  "defaultState": "idle",
+  "fallbackState": "idle",
+  "states": {
+    "idle":     "lottie/idle.json",
+    "thinking": "lottie/thinking.json",
+    "working":  "lottie/working.json",
+    "waiting":  "lottie/waiting.json",
+    "done":     "lottie/done.json",
+    "error":    "lottie/error.json"
+  }
+}

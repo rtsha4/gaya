@@ -1,0 +1,213 @@
+/* =============================================================
+   __PACK_NAME__ pack
+   All selectors are scoped to .mascot[data-pack="__PACK_ID__"]
+   so they never leak into other packs.
+   ============================================================= */
+
+/* ----- Base palette ----- */
+.mascot[data-pack="__PACK_ID__"] .body {
+  fill: #b6d7ff;
+  stroke: #2a4a78;
+  stroke-width: 3;
+}
+.mascot[data-pack="__PACK_ID__"] .eye { fill: #1a2a40; }
+.mascot[data-pack="__PACK_ID__"] .mouth,
+.mascot[data-pack="__PACK_ID__"] .mouth-smile,
+.mascot[data-pack="__PACK_ID__"] .mouth-frown {
+  fill: none;
+  stroke: #1a2a40;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.mascot[data-pack="__PACK_ID__"] .mouth-o { fill: #1a2a40; }
+.mascot[data-pack="__PACK_ID__"] .shadow { fill: rgba(0, 0, 0, 0.18); }
+
+/* ----- Decorations: hidden by default ----- */
+.mascot[data-pack="__PACK_ID__"] .think,
+.mascot[data-pack="__PACK_ID__"] .work,
+.mascot[data-pack="__PACK_ID__"] .bang,
+.mascot[data-pack="__PACK_ID__"] .celebrate,
+.mascot[data-pack="__PACK_ID__"] .tear,
+.mascot[data-pack="__PACK_ID__"] .eyes-surprise,
+.mascot[data-pack="__PACK_ID__"] .eyes-sad,
+.mascot[data-pack="__PACK_ID__"] .eyes-closed,
+.mascot[data-pack="__PACK_ID__"] .mouth-o,
+.mascot[data-pack="__PACK_ID__"] .mouth-smile,
+.mascot[data-pack="__PACK_ID__"] .mouth-frown {
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+}
+
+.mascot[data-pack="__PACK_ID__"] .think-bg,
+.mascot[data-pack="__PACK_ID__"] .bang-bg { fill: #fff7c2; stroke: #2a4a78; stroke-width: 2; }
+.mascot[data-pack="__PACK_ID__"] .think-mark,
+.mascot[data-pack="__PACK_ID__"] .bang-mark {
+  fill: #2a4a78; font: bold 18px system-ui, sans-serif;
+}
+.mascot[data-pack="__PACK_ID__"] .work-gear path { fill: #ff9466; }
+.mascot[data-pack="__PACK_ID__"] .work-gear circle { fill: #2a4a78; }
+.mascot[data-pack="__PACK_ID__"] .spark { fill: #ffd84a; }
+.mascot[data-pack="__PACK_ID__"] .tear-drop { fill: #6cb6ff; }
+
+/* ============================================================= */
+/*  BASE STATES                                                  */
+/* ============================================================= */
+
+/* idle: gentle breathing */
+.mascot[data-pack="__PACK_ID__"].state-idle .body-group {
+  animation: __PACK_ID__-breathe 3.6s ease-in-out infinite;
+  transform-origin: 100px 160px;
+}
+@keyframes __PACK_ID__-breathe {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50%      { transform: translateY(-2px) scale(1.025, 0.975); }
+}
+
+/* thinking: show "?" + sway */
+.mascot[data-pack="__PACK_ID__"].state-thinking .think { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-thinking .body-group {
+  animation: __PACK_ID__-sway 1.6s ease-in-out infinite;
+  transform-origin: 100px 160px;
+}
+@keyframes __PACK_ID__-sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50%      { transform: rotate(2deg); }
+}
+
+/* working: show gear + bounce */
+.mascot[data-pack="__PACK_ID__"].state-working .work { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-working .work-gear {
+  animation: __PACK_ID__-spin 1.4s linear infinite;
+  transform-origin: 150px 56px;
+  transform-box: fill-box;
+}
+@keyframes __PACK_ID__-spin {
+  to { transform: translate(150px, 56px) rotate(360deg); }
+}
+.mascot[data-pack="__PACK_ID__"].state-working .body-group {
+  animation: __PACK_ID__-bounce 0.5s ease-in-out infinite;
+  transform-origin: 100px 160px;
+}
+@keyframes __PACK_ID__-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* waiting: show "!" + pulse */
+.mascot[data-pack="__PACK_ID__"].state-waiting .bang { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-waiting .bang-bg {
+  animation: __PACK_ID__-pulse 0.9s ease-in-out infinite;
+  transform-origin: 148px 58px;
+  transform-box: fill-box;
+}
+@keyframes __PACK_ID__-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.18); }
+}
+
+/* done: smile + sparkles + small hop */
+.mascot[data-pack="__PACK_ID__"].state-done .eyes        { opacity: 0; }
+.mascot[data-pack="__PACK_ID__"].state-done .eyes-closed { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-done .mouth       { opacity: 0; }
+.mascot[data-pack="__PACK_ID__"].state-done .mouth-smile { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-done .celebrate   { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-done .body-group {
+  animation: __PACK_ID__-hop 0.8s ease-out 1;
+  transform-origin: 100px 160px;
+  animation-fill-mode: forwards;
+}
+@keyframes __PACK_ID__-hop {
+  0%   { transform: translateY(0) scale(1, 1); }
+  35%  { transform: translateY(-12px) scale(0.95, 1.08); }
+  60%  { transform: translateY(0) scale(1.08, 0.94); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+
+/* error: sad eyes + frown + tear + tremble */
+.mascot[data-pack="__PACK_ID__"].state-error .eyes      { opacity: 0; }
+.mascot[data-pack="__PACK_ID__"].state-error .eyes-sad  { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-error .mouth     { opacity: 0; }
+.mascot[data-pack="__PACK_ID__"].state-error .mouth-frown { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-error .tear      { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-error .tear-drop {
+  animation: __PACK_ID__-drip 1.6s ease-in infinite;
+}
+@keyframes __PACK_ID__-drip {
+  0%   { transform: translateY(0); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translateY(36px); opacity: 0; }
+}
+.mascot[data-pack="__PACK_ID__"].state-error .body-group {
+  animation: __PACK_ID__-tremble 0.18s ease-in-out infinite;
+  transform-origin: 100px 160px;
+}
+@keyframes __PACK_ID__-tremble {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(1.5px); }
+}
+
+/* ============================================================= */
+/*  OVERLAY STATES                                               */
+/* ============================================================= */
+
+/* dragging: surprised face + body stretches up */
+.mascot[data-pack="__PACK_ID__"].state-dragging .eyes           { opacity: 0; }
+.mascot[data-pack="__PACK_ID__"].state-dragging .eyes-surprise  { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-dragging .mouth          { opacity: 0; }
+.mascot[data-pack="__PACK_ID__"].state-dragging .mouth-o        { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-dragging .body-group {
+  animation: __PACK_ID__-dangle 1.2s ease-in-out infinite;
+  transform-origin: 100px 50px;
+}
+@keyframes __PACK_ID__-dangle {
+  0%, 100% { transform: scale(0.94, 1.08) rotate(-3deg); }
+  50%      { transform: scale(0.94, 1.08) rotate(3deg); }
+}
+
+/* falling: stretched + slight jitter */
+.mascot[data-pack="__PACK_ID__"].state-falling .eyes           { opacity: 0; }
+.mascot[data-pack="__PACK_ID__"].state-falling .eyes-surprise  { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-falling .mouth          { opacity: 0; }
+.mascot[data-pack="__PACK_ID__"].state-falling .mouth-o        { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-falling .body-group {
+  animation: __PACK_ID__-jitter 0.12s ease-in-out infinite;
+  transform: scale(0.9, 1.14);
+  transform-origin: 100px 50px;
+}
+@keyframes __PACK_ID__-jitter {
+  0%, 100% { transform: scale(0.9, 1.14) translateX(-1px); }
+  50%      { transform: scale(0.9, 1.14) translateX(1px); }
+}
+
+/* landed: squash flat, hold final frame (~280ms window) */
+.mascot[data-pack="__PACK_ID__"].state-landed .eyes         { opacity: 0; }
+.mascot[data-pack="__PACK_ID__"].state-landed .eyes-closed  { opacity: 1; }
+.mascot[data-pack="__PACK_ID__"].state-landed .body-group {
+  animation: __PACK_ID__-squash 0.28s ease-out 1;
+  animation-fill-mode: forwards;
+  transform-origin: 100px 175px;
+}
+@keyframes __PACK_ID__-squash {
+  0%   { transform: scale(0.9, 1.15) translateY(-6px); }
+  40%  { transform: scale(1.18, 0.78) translateY(8px); }
+  100% { transform: scale(1.12, 0.86) translateY(6px); }
+}
+
+/* ============================================================= */
+/*  WALKING (auto-play side trip)                                */
+/* ============================================================= */
+.mascot-wrap.walking .mascot[data-pack="__PACK_ID__"] {
+  animation: __PACK_ID__-walk 0.45s ease-in-out infinite;
+}
+@keyframes __PACK_ID__-walk {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+.mascot-wrap.walking.facing-left .mascot[data-pack="__PACK_ID__"] {
+  animation: __PACK_ID__-walk-left 0.45s ease-in-out infinite;
+}
+@keyframes __PACK_ID__-walk-left {
+  0%, 100% { transform: scaleX(-1) translateY(0); }
+  50%      { transform: scaleX(-1) translateY(-2px); }
+}
