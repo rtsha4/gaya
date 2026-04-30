@@ -1,0 +1,277 @@
+/* Classic pack: visuals migrated from the original inline SVG/CSS.
+   All selectors are scoped via .mascot[data-pack="classic"] to avoid
+   colliding with other packs that may co-exist briefly during a swap. */
+
+/* ---- Base look ---- */
+.mascot[data-pack="classic"] .shadow {
+  fill: rgba(0, 0, 0, 0.18);
+  filter: blur(1.5px);
+}
+
+.mascot[data-pack="classic"] .body {
+  fill: #b5d8ff;
+  stroke: #7aa8d6;
+  stroke-width: 2;
+  transition: fill 400ms ease, stroke 400ms ease;
+}
+
+.mascot[data-pack="classic"] .cheek {
+  fill: #ffb3c1;
+  opacity: 0.75;
+}
+
+.mascot[data-pack="classic"] .eye {
+  fill: #2a2a2a;
+}
+
+.mascot[data-pack="classic"] .eyes-x path {
+  stroke: #2a2a2a;
+  stroke-width: 3;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.mascot[data-pack="classic"] .mouth {
+  fill: none;
+  stroke: #2a2a2a;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* Hidden by default, state classes reveal */
+.mascot[data-pack="classic"] .eyes-x,
+.mascot[data-pack="classic"] .dots,
+.mascot[data-pack="classic"] .gear,
+.mascot[data-pack="classic"] .bang,
+.mascot[data-pack="classic"] .check {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+
+.mascot[data-pack="classic"] .dot {
+  fill: #7aa8d6;
+}
+
+.mascot[data-pack="classic"] .gear-body {
+  fill: #ffd27a;
+  stroke: #c9993a;
+  stroke-width: 1.5;
+}
+.mascot[data-pack="classic"] .gear-teeth rect {
+  fill: #ffd27a;
+  stroke: #c9993a;
+  stroke-width: 1.2;
+}
+.mascot[data-pack="classic"] .gear-hole {
+  fill: #fff7df;
+}
+
+.mascot[data-pack="classic"] .bang-bg {
+  fill: #fff3a8;
+  stroke: #d6b82a;
+  stroke-width: 2;
+}
+.mascot[data-pack="classic"] .bang-text {
+  font-weight: 800;
+  font-size: 18px;
+  fill: #8a6a00;
+}
+
+.mascot[data-pack="classic"] .check-bg {
+  fill: #c6f5c6;
+  stroke: #3fa83f;
+  stroke-width: 2;
+}
+.mascot[data-pack="classic"] .check-mark {
+  fill: none;
+  stroke: #27782a;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Visibility lift: drop shadow gives a bit more depth on transparent bg. */
+.mascot[data-pack="classic"] {
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.22));
+}
+
+/* ========================================================================
+   States
+   ======================================================================== */
+
+/* idle: gentle breathing + blink */
+.mascot[data-pack="classic"].state-idle .body-group {
+  animation: classic-breathe 3.2s ease-in-out infinite;
+  transform-origin: 100px 130px;
+}
+.mascot[data-pack="classic"].state-idle .eyes .eye {
+  animation: classic-blink 4.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes classic-breathe {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50%      { transform: translateY(-3px) scale(1.02, 0.98); }
+}
+@keyframes classic-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95%           { transform: scaleY(0.1); }
+}
+
+/* thinking: eyes darting + dots cycling */
+.mascot[data-pack="classic"].state-thinking .eyes {
+  animation: classic-dart 1.6s ease-in-out infinite;
+}
+.mascot[data-pack="classic"].state-thinking .dots {
+  opacity: 1;
+}
+.mascot[data-pack="classic"].state-thinking .dot:nth-child(1) { animation: classic-dot-fade 1.2s infinite 0s; }
+.mascot[data-pack="classic"].state-thinking .dot:nth-child(2) { animation: classic-dot-fade 1.2s infinite 0.2s; }
+.mascot[data-pack="classic"].state-thinking .dot:nth-child(3) { animation: classic-dot-fade 1.2s infinite 0.4s; }
+
+@keyframes classic-dart {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-3px); }
+  50%      { transform: translateX(0); }
+  75%      { transform: translateX(3px); }
+}
+@keyframes classic-dot-fade {
+  0%, 100% { opacity: 0.2; }
+  50%      { opacity: 1; }
+}
+
+/* working: bounce + brighter body + spinning gear */
+.mascot[data-pack="classic"].state-working .body {
+  fill: #cfe8ff;
+}
+.mascot[data-pack="classic"].state-working .body-group {
+  animation: classic-hop 0.6s ease-in-out infinite;
+  transform-origin: 100px 160px;
+}
+.mascot[data-pack="classic"].state-working .gear {
+  opacity: 1;
+}
+.mascot[data-pack="classic"].state-working .gear-spin {
+  animation: classic-spin 1.8s linear infinite;
+  transform-origin: 0 0;
+}
+
+@keyframes classic-hop {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+@keyframes classic-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* waiting: pulse yellow + bang mark */
+.mascot[data-pack="classic"].state-waiting .body {
+  fill: #fff3a8;
+  stroke: #d6b82a;
+  animation: classic-pulse 0.9s ease-in-out infinite;
+}
+.mascot[data-pack="classic"].state-waiting .bang {
+  opacity: 1;
+  animation: classic-bob 0.9s ease-in-out infinite;
+  transform-origin: 150px 50px;
+}
+
+@keyframes classic-pulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.2); }
+}
+@keyframes classic-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* done: jump once + check appears */
+.mascot[data-pack="classic"].state-done .body-group {
+  animation: classic-jump 0.6s ease-out 1;
+  transform-origin: 100px 160px;
+}
+.mascot[data-pack="classic"].state-done .mouth {
+  d: path("M86 118 Q100 132 114 118");
+}
+.mascot[data-pack="classic"].state-done .check {
+  opacity: 1;
+  animation: classic-pop 0.6s ease-out 1;
+  transform-origin: 150px 50px;
+}
+
+@keyframes classic-jump {
+  0%   { transform: translateY(0); }
+  40%  { transform: translateY(-18px) scale(1.05, 0.95); }
+  100% { transform: translateY(0); }
+}
+@keyframes classic-pop {
+  0%   { transform: scale(0.3); opacity: 0; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+/* error: red body, x eyes, shake */
+.mascot[data-pack="classic"].state-error .body {
+  fill: #ffb3b3;
+  stroke: #c9595a;
+}
+.mascot[data-pack="classic"].state-error .body-group {
+  animation: classic-shake 0.22s ease-in-out infinite;
+  transform-origin: 100px 100px;
+}
+.mascot[data-pack="classic"].state-error .eyes {
+  opacity: 0;
+}
+.mascot[data-pack="classic"].state-error .eyes-x {
+  opacity: 1;
+}
+.mascot[data-pack="classic"].state-error .mouth {
+  stroke: #7a1f1f;
+}
+
+@keyframes classic-shake {
+  0%, 100% { transform: translate(0, 0); }
+  25%      { transform: translate(-2px, 1px); }
+  50%      { transform: translate(2px, -1px); }
+  75%      { transform: translate(-1px, -1px); }
+}
+
+/* dragging (overlay): the user is holding the mascot up.
+   Body stretches vertically and sways gently; existing state decorations
+   (gear, dots, bang, check) are off by default and stay off here. */
+.mascot[data-pack="classic"].state-dragging .body-group {
+  animation: classic-dangle 0.34s ease-in-out infinite;
+  transform-origin: 100px 60px;
+}
+@keyframes classic-dangle {
+  0%   { transform: translateY(-3px) scale(0.93, 1.1) rotate(-1.5deg); }
+  50%  { transform: translateY(-3px) scale(0.93, 1.1) rotate(1.5deg); }
+  100% { transform: translateY(-3px) scale(0.93, 1.1) rotate(-1.5deg); }
+}
+
+/* falling (overlay): vertical stretch + light jitter while the tick loop
+   eases the window back to the floor. */
+.mascot[data-pack="classic"].state-falling .body-group {
+  animation: classic-fall 0.2s ease-in-out infinite;
+  transform-origin: 100px 100px;
+}
+@keyframes classic-fall {
+  0%   { transform: scale(0.9, 1.15) translate(0, 0); }
+  50%  { transform: scale(0.9, 1.15) translate(1px, -1px); }
+  100% { transform: scale(0.9, 1.15) translate(-1px, 0); }
+}
+
+/* landed (overlay): one-shot squash, frozen on the final frame until the
+   overlay clears. */
+.mascot[data-pack="classic"].state-landed .body-group {
+  animation: classic-squash 0.3s ease-out 1;
+  transform-origin: 100px 170px;
+  animation-fill-mode: forwards;
+}
+@keyframes classic-squash {
+  0%   { transform: scale(0.9, 1.15) translateY(-4px); }
+  35%  { transform: scale(1.16, 0.84) translateY(8px); }
+  100% { transform: scale(1.14, 0.86) translateY(8px); }
+}

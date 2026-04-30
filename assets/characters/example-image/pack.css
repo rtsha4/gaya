@@ -1,0 +1,5 @@
+/* example-image: minimal styling for the image renderer test pack.
+   Adds a soft drop-shadow so the mascot reads on any wallpaper. */
+.mascot[data-pack="example-image"] {
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));
+}

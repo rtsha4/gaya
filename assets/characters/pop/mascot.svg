@@ -1,0 +1,83 @@
+<svg
+  class="mascot"
+  viewBox="0 0 200 200"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-label="desktopi pop mascot"
+>
+  <!-- Soft drop shadow on the floor -->
+  <ellipse class="shadow" cx="100" cy="172" rx="48" ry="7" />
+
+  <!-- Body group (everything that bounces / breathes / tilts together) -->
+  <g class="body-group">
+    <!-- Round, peachy body with thick black outline -->
+    <circle class="body" cx="100" cy="100" r="62" />
+
+    <!-- Coral cheeks -->
+    <circle class="cheek left"  cx="68"  cy="118" r="9" />
+    <circle class="cheek right" cx="132" cy="118" r="9" />
+
+    <!-- Eyes (default: big circular eyes with white highlights) -->
+    <g class="eyes">
+      <g class="eye left">
+        <circle class="eye-ball" cx="80" cy="95" r="11" />
+        <circle class="eye-shine" cx="84" cy="91" r="3.2" />
+        <circle class="eye-shine-sm" cx="76" cy="99" r="1.4" />
+      </g>
+      <g class="eye right">
+        <circle class="eye-ball" cx="120" cy="95" r="11" />
+        <circle class="eye-shine" cx="124" cy="91" r="3.2" />
+        <circle class="eye-shine-sm" cx="116" cy="99" r="1.4" />
+      </g>
+    </g>
+
+    <!-- Surprise eyes (waiting): wide O eyes -->
+    <g class="eyes-surprise">
+      <circle cx="80"  cy="94" r="9" class="eye-ball" />
+      <circle cx="120" cy="94" r="9" class="eye-ball" />
+      <circle cx="80"  cy="94" r="3.5" class="eye-pupil-sm" />
+      <circle cx="120" cy="94" r="3.5" class="eye-pupil-sm" />
+    </g>
+
+    <!-- Sad / error eyes: closed curve >_< style (gentle squint) -->
+    <g class="eyes-sad">
+      <path d="M70 96 Q80 88 90 96" />
+      <path d="M110 96 Q120 88 130 96" />
+    </g>
+
+    <!-- Default mouth: small smile -->
+    <path class="mouth" d="M92 124 Q100 130 108 124" />
+
+    <!-- Surprise mouth (small O) -->
+    <ellipse class="mouth-o" cx="100" cy="128" rx="4" ry="5" />
+
+    <!-- Tear (error) -->
+    <path class="tear" d="M124 108 Q126 116 128 120 Q130 116 132 108 Z" />
+  </g>
+
+  <!-- Thinking bubble: question mark above head -->
+  <g class="think">
+    <circle class="think-bg" cx="150" cy="38" r="16" />
+    <text class="think-text" x="150" y="46" text-anchor="middle">?</text>
+  </g>
+
+  <!-- Working sparkles around the body -->
+  <g class="sparkles">
+    <path class="sparkle s1" d="M40 50 l3 -8 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 z" />
+    <path class="sparkle s2" d="M165 70 l2.5 -6 l2.5 6 l6 2.5 l-6 2.5 l-2.5 6 l-2.5 -6 l-6 -2.5 z" />
+    <path class="sparkle s3" d="M50 150 l2 -5 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 z" />
+  </g>
+
+  <!-- Waiting "!" badge -->
+  <g class="bang">
+    <circle class="bang-bg" cx="152" cy="44" r="16" />
+    <text class="bang-text" x="152" y="52" text-anchor="middle">!</text>
+  </g>
+
+  <!-- Done celebration: hearts and stars popping -->
+  <g class="celebrate">
+    <path class="heart h1" d="M40 60 c-6 -10 -18 -2 -8 6 l8 8 l8 -8 c10 -8 -2 -16 -8 -6 z" />
+    <path class="star s1"  d="M160 50 l3 -9 l3 9 l9 3 l-9 3 l-3 9 l-3 -9 l-9 -3 z" />
+    <path class="heart h2" d="M170 140 c-5 -8 -14 -2 -6 5 l6 6 l6 -6 c8 -7 -1 -13 -6 -5 z" />
+    <path class="star s2"  d="M40 140 l2.5 -7 l2.5 7 l7 2.5 l-7 2.5 l-2.5 7 l-2.5 -7 l-7 -2.5 z" />
+  </g>
+</svg>

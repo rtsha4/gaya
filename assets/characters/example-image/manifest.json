@@ -1,0 +1,23 @@
+{
+  "id": "example-image",
+  "name": "Image Sample (test)",
+  "version": "1.0.0",
+  "renderer": "image",
+  "size": { "width": 200, "height": 200 },
+  "bubble": {
+    "anchor": "top-right"
+  },
+  "defaultState": "idle",
+  "fallbackState": "idle",
+  "states": {
+    "idle": "states/idle.svg",
+    "thinking": "states/thinking.svg",
+    "working": "states/working.svg",
+    "waiting": "states/waiting.svg",
+    "done": "states/done.svg",
+    "error": "states/error.svg",
+    "dragging": "states/dragging.svg",
+    "falling": "states/falling.svg",
+    "landed": "states/landed.svg"
+  }
+}

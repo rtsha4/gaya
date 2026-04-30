@@ -1,0 +1,69 @@
+<svg
+  class="mascot"
+  viewBox="0 0 200 200"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-label="desktopi mascot"
+>
+  <!-- Shadow ellipse under the body -->
+  <ellipse class="shadow" cx="100" cy="170" rx="50" ry="8" />
+
+  <!-- Body: rounded slime/robot -->
+  <g class="body-group">
+    <circle class="body" cx="100" cy="100" r="60" />
+    <!-- cheeks -->
+    <circle class="cheek" cx="70" cy="115" r="6" />
+    <circle class="cheek" cx="130" cy="115" r="6" />
+
+    <!-- Eyes (normal) -->
+    <g class="eyes">
+      <circle class="eye left" cx="82" cy="95" r="7" />
+      <circle class="eye right" cx="118" cy="95" r="7" />
+    </g>
+
+    <!-- Error eyes (x) -->
+    <g class="eyes-x">
+      <path d="M75 88 L89 102 M89 88 L75 102" />
+      <path d="M111 88 L125 102 M125 88 L111 102" />
+    </g>
+
+    <!-- Mouth -->
+    <path class="mouth" d="M88 120 Q100 128 112 120" />
+  </g>
+
+  <!-- Thinking dots above head -->
+  <g class="dots">
+    <circle class="dot" cx="80" cy="32" r="4" />
+    <circle class="dot" cx="100" cy="28" r="4" />
+    <circle class="dot" cx="120" cy="32" r="4" />
+  </g>
+
+  <!-- Working gear -->
+  <g class="gear" transform="translate(150 40)">
+    <g class="gear-spin">
+      <circle r="10" class="gear-body" />
+      <g class="gear-teeth">
+        <rect x="-2" y="-16" width="4" height="6" rx="1" />
+        <rect x="-2" y="10"  width="4" height="6" rx="1" />
+        <rect x="-16" y="-2" width="6" height="4" rx="1" />
+        <rect x="10" y="-2"  width="6" height="4" rx="1" />
+        <rect x="-12" y="-12" width="4" height="6" rx="1" transform="rotate(45)" />
+        <rect x="-12" y="-12" width="4" height="6" rx="1" transform="rotate(135)" />
+        <rect x="-12" y="-12" width="4" height="6" rx="1" transform="rotate(225)" />
+        <rect x="-12" y="-12" width="4" height="6" rx="1" transform="rotate(315)" />
+      </g>
+      <circle r="3" class="gear-hole" />
+    </g>
+  </g>
+
+  <!-- Waiting bang -->
+  <g class="bang">
+    <circle cx="150" cy="50" r="14" class="bang-bg" />
+    <text x="150" y="57" text-anchor="middle" class="bang-text">!</text>
+  </g>
+
+  <!-- Done check -->
+  <g class="check">
+    <circle cx="150" cy="50" r="14" class="check-bg" />
+    <path d="M143 51 L149 57 L158 46" class="check-mark" />
+  </g>
+</svg>

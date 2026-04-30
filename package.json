@@ -1,0 +1,21 @@
+{
+  "name": "desktopi",
+  "version": "0.1.0",
+  "description": "Desktop mascot that animates based on Claude Code CLI agent state.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --inspect",
+    "postinstall": "node scripts/postinstall.js",
+    "install-hooks": "node scripts/install-hooks.js",
+    "uninstall-hooks": "node scripts/install-hooks.js --uninstall"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "lottie-web": "^5.12.2"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0"
+  }
+}

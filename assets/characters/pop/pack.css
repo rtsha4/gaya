@@ -1,0 +1,438 @@
+/* Pop pack: bright pastel mascot with chunky black outlines and lively states.
+   All selectors scoped via .mascot[data-pack="pop"] so they cannot leak
+   into other packs during a swap. */
+
+/* Layered drop-shadow for clear visibility on any desktop wallpaper. */
+.mascot[data-pack="pop"] {
+  filter:
+    drop-shadow(0 4px 6px rgba(0, 0, 0, 0.28))
+    drop-shadow(0 1px 0 rgba(0, 0, 0, 0.15));
+}
+
+/* ---- Base look ---- */
+.mascot[data-pack="pop"] .shadow {
+  fill: rgba(0, 0, 0, 0.25);
+  filter: blur(2px);
+}
+
+.mascot[data-pack="pop"] .body {
+  fill: #ffd6a5;
+  stroke: #3a2a1f;
+  stroke-width: 3;
+  transition: fill 300ms ease, stroke 300ms ease;
+}
+
+.mascot[data-pack="pop"] .cheek {
+  fill: #ff8da3;
+  opacity: 0.85;
+}
+
+.mascot[data-pack="pop"] .eye-ball {
+  fill: #1a1a2e;
+}
+.mascot[data-pack="pop"] .eye-shine {
+  fill: #ffffff;
+}
+.mascot[data-pack="pop"] .eye-shine-sm {
+  fill: #ffffff;
+  opacity: 0.85;
+}
+.mascot[data-pack="pop"] .eye-pupil-sm {
+  fill: #1a1a2e;
+}
+
+.mascot[data-pack="pop"] .eyes-sad path {
+  fill: none;
+  stroke: #1a1a2e;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.mascot[data-pack="pop"] .mouth {
+  fill: none;
+  stroke: #3a2a1f;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+}
+.mascot[data-pack="pop"] .mouth-o {
+  fill: #6a2a3a;
+  stroke: #3a2a1f;
+  stroke-width: 2;
+}
+
+.mascot[data-pack="pop"] .tear {
+  fill: #6cc1ff;
+  stroke: #2a6aa0;
+  stroke-width: 1.2;
+}
+
+/* Hidden by default, state classes reveal */
+.mascot[data-pack="pop"] .eyes-surprise,
+.mascot[data-pack="pop"] .eyes-sad,
+.mascot[data-pack="pop"] .mouth-o,
+.mascot[data-pack="pop"] .tear,
+.mascot[data-pack="pop"] .think,
+.mascot[data-pack="pop"] .sparkles,
+.mascot[data-pack="pop"] .bang,
+.mascot[data-pack="pop"] .celebrate {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+
+/* Thought bubble */
+.mascot[data-pack="pop"] .think-bg {
+  fill: #ffffff;
+  stroke: #3a2a1f;
+  stroke-width: 2.5;
+}
+.mascot[data-pack="pop"] .think-text {
+  font-weight: 800;
+  font-size: 20px;
+  fill: #3a2a1f;
+}
+
+/* Sparkle decorations */
+.mascot[data-pack="pop"] .sparkle {
+  fill: #fff3a8;
+  stroke: #d6a23a;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+/* Bang badge */
+.mascot[data-pack="pop"] .bang-bg {
+  fill: #fff3a8;
+  stroke: #3a2a1f;
+  stroke-width: 2.5;
+}
+.mascot[data-pack="pop"] .bang-text {
+  font-weight: 900;
+  font-size: 22px;
+  fill: #3a2a1f;
+}
+
+/* Done celebration shapes */
+.mascot[data-pack="pop"] .heart {
+  fill: #ff6f9e;
+  stroke: #3a2a1f;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.mascot[data-pack="pop"] .star {
+  fill: #ffe066;
+  stroke: #3a2a1f;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+/* ========================================================================
+   States
+   ======================================================================== */
+
+/* idle: soft breathing + occasional blink + occasional wink (right eye). */
+.mascot[data-pack="pop"].state-idle .body-group {
+  animation: pop-breathe 3.6s ease-in-out infinite;
+  transform-origin: 100px 140px;
+}
+.mascot[data-pack="pop"].state-idle .eye {
+  animation: pop-blink 6s ease-in-out infinite;
+  transform-origin: center;
+  transform-box: fill-box;
+}
+.mascot[data-pack="pop"].state-idle .eye.right {
+  /* right eye gets an extra wink phase, offset to feel natural */
+  animation: pop-wink 7.2s ease-in-out infinite;
+}
+
+@keyframes pop-breathe {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  50%      { transform: translateY(-3px) scale(1.025, 0.975); }
+}
+@keyframes pop-blink {
+  0%, 94%, 100% { transform: scaleY(1); }
+  97%           { transform: scaleY(0.05); }
+}
+@keyframes pop-wink {
+  0%, 80%, 100% { transform: scaleY(1); }
+  84%           { transform: scaleY(0.05); }
+  88%           { transform: scaleY(1); }
+}
+
+/* thinking: tilt body, eyes glance, '?' bubble appears. */
+.mascot[data-pack="pop"].state-thinking .body-group {
+  animation: pop-tilt 2.4s ease-in-out infinite;
+  transform-origin: 100px 150px;
+}
+.mascot[data-pack="pop"].state-thinking .eyes {
+  animation: pop-glance 2s ease-in-out infinite;
+}
+.mascot[data-pack="pop"].state-thinking .think {
+  opacity: 1;
+  animation: pop-think-bob 2s ease-in-out infinite;
+  transform-origin: 150px 50px;
+}
+
+@keyframes pop-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-6deg); }
+  75%      { transform: rotate(6deg); }
+}
+@keyframes pop-glance {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-3px); }
+  75%      { transform: translateX(3px); }
+}
+@keyframes pop-think-bob {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-3px) scale(1.05); }
+}
+
+/* working: bouncy hops + sparkles around the body. */
+.mascot[data-pack="pop"].state-working .body-group {
+  animation: pop-hop 0.55s ease-in-out infinite;
+  transform-origin: 100px 165px;
+}
+.mascot[data-pack="pop"].state-working .sparkles {
+  opacity: 1;
+}
+.mascot[data-pack="pop"].state-working .sparkle.s1 {
+  animation: pop-sparkle 1.2s ease-in-out infinite 0s;
+  transform-origin: 40px 50px;
+}
+.mascot[data-pack="pop"].state-working .sparkle.s2 {
+  animation: pop-sparkle 1.2s ease-in-out infinite 0.4s;
+  transform-origin: 165px 70px;
+}
+.mascot[data-pack="pop"].state-working .sparkle.s3 {
+  animation: pop-sparkle 1.2s ease-in-out infinite 0.8s;
+  transform-origin: 50px 150px;
+}
+
+@keyframes pop-hop {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9px) scale(1.04, 0.96); }
+}
+@keyframes pop-sparkle {
+  0%, 100% { opacity: 0; transform: scale(0.4); }
+  50%      { opacity: 1; transform: scale(1.1); }
+}
+
+/* waiting: surprise face (O eyes, O mouth) + bang badge + light blink. */
+.mascot[data-pack="pop"].state-waiting .eyes {
+  opacity: 0;
+}
+.mascot[data-pack="pop"].state-waiting .eyes-surprise {
+  opacity: 1;
+}
+.mascot[data-pack="pop"].state-waiting .mouth {
+  opacity: 0;
+}
+.mascot[data-pack="pop"].state-waiting .mouth-o {
+  opacity: 1;
+}
+.mascot[data-pack="pop"].state-waiting .body-group {
+  animation: pop-flash 1.1s ease-in-out infinite;
+  transform-origin: 100px 100px;
+}
+.mascot[data-pack="pop"].state-waiting .bang {
+  opacity: 1;
+  animation: pop-bang 0.8s ease-in-out infinite;
+  transform-origin: 152px 44px;
+}
+
+@keyframes pop-flash {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.18); }
+}
+@keyframes pop-bang {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-4px) scale(1.1); }
+}
+
+/* done: celebratory jump + hearts and stars pop out. */
+.mascot[data-pack="pop"].state-done .body-group {
+  animation: pop-jump 0.7s ease-out 1;
+  transform-origin: 100px 165px;
+}
+.mascot[data-pack="pop"].state-done .mouth {
+  /* Wider grin */
+  d: path("M88 122 Q100 134 112 122");
+}
+.mascot[data-pack="pop"].state-done .celebrate {
+  opacity: 1;
+}
+.mascot[data-pack="pop"].state-done .celebrate .h1 {
+  animation: pop-burst 0.9s ease-out 1;
+  transform-origin: 40px 70px;
+}
+.mascot[data-pack="pop"].state-done .celebrate .s1 {
+  animation: pop-burst 0.9s ease-out 1 0.1s;
+  transform-origin: 165px 55px;
+}
+.mascot[data-pack="pop"].state-done .celebrate .h2 {
+  animation: pop-burst 0.9s ease-out 1 0.2s;
+  transform-origin: 173px 145px;
+}
+.mascot[data-pack="pop"].state-done .celebrate .s2 {
+  animation: pop-burst 0.9s ease-out 1 0.05s;
+  transform-origin: 45px 145px;
+}
+
+@keyframes pop-jump {
+  0%   { transform: translateY(0); }
+  40%  { transform: translateY(-22px) scale(1.08, 0.92); }
+  70%  { transform: translateY(-2px) scale(0.98, 1.02); }
+  100% { transform: translateY(0); }
+}
+@keyframes pop-burst {
+  0%   { transform: scale(0.2) translateY(0); opacity: 0; }
+  40%  { transform: scale(1.2) translateY(-6px); opacity: 1; }
+  100% { transform: scale(1) translateY(-12px); opacity: 0; }
+}
+
+/* error: sad squint eyes + tear + body wobble + slightly desaturated body. */
+.mascot[data-pack="pop"].state-error .body {
+  fill: #f5b8a3;
+}
+.mascot[data-pack="pop"].state-error .eyes {
+  opacity: 0;
+}
+.mascot[data-pack="pop"].state-error .eyes-sad {
+  opacity: 1;
+}
+.mascot[data-pack="pop"].state-error .mouth {
+  /* sad small frown */
+  d: path("M92 128 Q100 122 108 128");
+}
+.mascot[data-pack="pop"].state-error .tear {
+  opacity: 1;
+  animation: pop-tear 1.4s ease-in-out infinite;
+  transform-origin: 128px 110px;
+}
+.mascot[data-pack="pop"].state-error .body-group {
+  animation: pop-wobble 0.28s ease-in-out infinite;
+  transform-origin: 100px 100px;
+}
+
+@keyframes pop-wobble {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25%      { transform: translate(-2px, 1px) rotate(-1deg); }
+  50%      { transform: translate(2px, -1px) rotate(1deg); }
+  75%      { transform: translate(-1px, -1px) rotate(-0.5deg); }
+}
+@keyframes pop-tear {
+  0%   { transform: translateY(-2px) scaleY(0.9); opacity: 0.4; }
+  50%  { transform: translateY(2px)  scaleY(1.1); opacity: 1; }
+  100% { transform: translateY(6px)  scaleY(1);   opacity: 0; }
+}
+
+/* dragging (overlay): the user is holding the mascot up.
+   - body stretches vertically (squeeze grip + dangling body)
+   - eyes switch to the surprise variant (small pupils, "O" shape)
+   - body wobbles gently like it's being held in place
+   - state-specific decorations (gear, sparkle, bang, celebrate, tear,
+     mouth-o, eyes-sad, think) are NOT enabled here — by virtue of the
+     state class no longer being state-working / state-waiting / etc.,
+     their default `opacity: 0` rule applies and they vanish, which is
+     what we want while the mascot is being lifted. */
+.mascot[data-pack="pop"].state-dragging .body-group {
+  /* The squeeze: scaleY > scaleX makes the body look stretched vertically
+     like it's being pinched up by the head. translateY pulls the whole
+     body up a couple of px so the bottom looks slightly lifted off the
+     floor. */
+  animation: pop-dangle 0.32s ease-in-out infinite;
+  transform-origin: 100px 60px; /* near the top of the head — where the pinch happens */
+}
+.mascot[data-pack="pop"].state-dragging .eyes {
+  opacity: 0;
+}
+.mascot[data-pack="pop"].state-dragging .eyes-surprise {
+  opacity: 1;
+}
+.mascot[data-pack="pop"].state-dragging .mouth {
+  opacity: 0;
+}
+.mascot[data-pack="pop"].state-dragging .mouth-o {
+  opacity: 1;
+}
+@keyframes pop-dangle {
+  0%   { transform: translateY(-3px) scale(0.92, 1.12) rotate(-1.5deg); }
+  50%  { transform: translateY(-3px) scale(0.92, 1.12) rotate(1.5deg); }
+  100% { transform: translateY(-3px) scale(0.92, 1.12) rotate(-1.5deg); }
+}
+
+/* falling (overlay): user just released the mascot above the floor; the
+   tick loop is easing posY back down. The body looks vertically stretched
+   like it's catching air, with a quick low-amplitude jitter to suggest
+   wind / panic. Eyes go to the surprise variant, mouth drops open. */
+.mascot[data-pack="pop"].state-falling .body-group {
+  animation: pop-fall 0.18s ease-in-out infinite;
+  transform-origin: 100px 100px;
+}
+.mascot[data-pack="pop"].state-falling .eyes {
+  opacity: 0;
+}
+.mascot[data-pack="pop"].state-falling .eyes-surprise {
+  opacity: 1;
+}
+.mascot[data-pack="pop"].state-falling .mouth {
+  opacity: 0;
+}
+.mascot[data-pack="pop"].state-falling .mouth-o {
+  opacity: 1;
+}
+@keyframes pop-fall {
+  0%   { transform: scale(0.9, 1.15) translate(0, 0); }
+  50%  { transform: scale(0.9, 1.15) translate(1px, -1px); }
+  100% { transform: scale(0.9, 1.15) translate(-1px, 0); }
+}
+
+/* landed (overlay): the mascot just touched the floor and squashes
+   horizontally for a single beat. main.js clears this after
+   LANDED_DURATION_MS (~280ms), so the animation runs once and freezes on
+   its final frame for the remaining ms. Eyes go to a closed/squint variant
+   (we reuse eyes-sad's strokes for a quick ">_<" feel). */
+.mascot[data-pack="pop"].state-landed .body-group {
+  animation: pop-squash 0.3s ease-out 1;
+  transform-origin: 100px 170px;
+  /* Hold the squashed pose until the overlay is cleared. */
+  animation-fill-mode: forwards;
+}
+.mascot[data-pack="pop"].state-landed .eyes {
+  opacity: 0;
+}
+.mascot[data-pack="pop"].state-landed .eyes-sad {
+  opacity: 1;
+}
+.mascot[data-pack="pop"].state-landed .mouth {
+  /* small pinched line */
+  d: path("M92 126 Q100 124 108 126");
+}
+@keyframes pop-squash {
+  0%   { transform: scale(0.9, 1.15) translateY(-4px); }
+  35%  { transform: scale(1.18, 0.78) translateY(10px); }
+  70%  { transform: scale(1.15, 0.85) translateY(8px); }
+  100% { transform: scale(1.15, 0.85) translateY(8px); }
+}
+
+/* walking: gentle 2px bob applied to the body group. Layered on top of
+   whatever state animation is active by targeting a different element
+   (.body-group already has state-driven anims, so we drive walk via the
+   broader .controls / fall back to the whole svg's translate). We use a
+   dedicated subtle keyframe and only enable while the wrap has .walking. */
+.mascot-wrap.walking .mascot[data-pack="pop"] {
+  animation: pop-walk 0.45s ease-in-out infinite;
+}
+@keyframes pop-walk {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+/* When also facing left, compose scaleX with the bob. */
+.mascot-wrap.walking.facing-left .mascot[data-pack="pop"] {
+  animation: pop-walk-left 0.45s ease-in-out infinite;
+}
+@keyframes pop-walk-left {
+  0%, 100% { transform: scaleX(-1) translateY(0); }
+  50%      { transform: scaleX(-1) translateY(-2px); }
+}

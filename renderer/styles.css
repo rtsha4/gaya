@@ -1,0 +1,227 @@
+/* Pack-independent styles only. Per-character visuals/animations live in
+   assets/characters/<id>/pack.css and are loaded at runtime. */
+
+/* Fully transparent background so the Electron window shows through to the desktop. */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic UI", sans-serif;
+  color: #222;
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Pin mascot toward the bottom of the window so the bubble (absolutely
+     positioned above the mascot's head, sometimes overflowing mascot-wrap
+     upwards) has room within the window before being clipped. */
+  justify-content: flex-end;
+  /* Small breathing room from the very bottom edge. */
+  padding-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.mascot-wrap {
+  width: 200px;
+  height: 200px;
+  position: relative;
+  /* Whole mascot acts as a drag handle. */
+  -webkit-app-region: drag;
+}
+
+.mascot {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* Direction flip for walking. Applied to the mascot element only — the
+   bubble must NOT mirror, so we do not flip .mascot-wrap itself.
+   .facing-right is the default and a no-op. We target `.mascot` (not
+   `svg.mascot`) so the rule works uniformly across renderer types: an
+   <svg class="mascot"> for the SVG renderer, an <img class="mascot"> for
+   the Image renderer, or a <div class="mascot lottie-host"> for Lottie. */
+.mascot-wrap.facing-left .mascot {
+  transform: scaleX(-1);
+  transform-origin: 50% 50%;
+}
+
+/* ========================================================================
+   Speech bubble — pack-independent.
+   Positioning is anchored via the data-anchor attribute on .bubble.
+   ======================================================================== */
+.bubble {
+  position: absolute;
+  /* Anchored relative to .mascot-wrap (200x200). Default top-right
+     placement; data-anchor variants below override. The bubble may extend
+     beyond the mascot-wrap box — that's fine, neither .stage nor
+     .mascot-wrap clip overflow, and the window has ~40px of horizontal
+     and ~32px of vertical breathing room around the mascot. */
+  top: 0;
+  left: 105px;
+  right: auto;
+  bottom: auto;
+  /* Narrower than before (was 150px) since we're now anchored to the
+     mascot (200px wide) rather than the window. Long messages still
+     get ellipsized by .bubble-text. */
+  max-width: 130px;
+  padding: 8px 12px;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  border-radius: 14px;
+  /* drop-shadow follows the alpha shape of the element AND its children
+     (so the tail is included in the shadow as a single unified silhouette).
+     Keep this on .bubble itself so .bubble-tail (a child) is part of the
+     shadowed shape. Avoid box-shadow here — it would only outline the
+     rounded rectangle and leave the tail looking detached. */
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.22));
+  /* Don't intercept the drag region — user can still grab via mascot. */
+  -webkit-app-region: no-drag;
+  pointer-events: none;
+  z-index: 5;
+  /* Only animate opacity — `transform` is reserved for anchor-specific
+     centering (e.g. top anchor uses translateX(-50%)). */
+  transition: opacity 240ms ease;
+  opacity: 1;
+  /* Truncation of long text is handled on .bubble-text below; we cannot
+     use overflow:hidden on .bubble itself because that would clip the
+     .bubble-tail which is positioned outside the rounded body. */
+}
+
+/* Single-line ellipsis on the inner text span. */
+.bubble-text {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* When idle, dim the bubble slightly so it doesn't dominate. */
+.bubble.is-idle {
+  opacity: 0.65;
+}
+
+/* Hidden state used for fade transitions. Pure opacity so it doesn't
+   conflict with anchor variants that use `transform` for centering. */
+.bubble.is-hidden {
+  opacity: 0;
+}
+
+/* Anchor variants — coordinates are relative to .mascot-wrap (200x200).
+   Mascot body center is roughly (100, 100), head top ~y=40. The bubble
+   is placed so its tail lands near the upper edge of the head. */
+
+/* top-right: bubble's left edge starts just to the right of mascot center.
+   Tail (left:18px on the bubble) lands at x ~= 123 over the head's right side. */
+.bubble[data-anchor="top-right"] {
+  top: 0;
+  left: 105px;
+  right: auto;
+  bottom: auto;
+}
+
+/* top-left: mirror of top-right. Bubble's right edge ends just to the
+   left of mascot center; tail (right:18px) lands at x ~= 77. */
+.bubble[data-anchor="top-left"] {
+  top: 0;
+  right: 105px;
+  left: auto;
+  bottom: auto;
+}
+
+/* top: bubble centered horizontally above the mascot, tail straight down
+   from the middle. Sits slightly above mascot-wrap's top edge. */
+.bubble[data-anchor="top"] {
+  top: -8px;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translateX(-50%);
+}
+
+/* The little tail that points toward the mascot.
+   Drawn as a CSS triangle (zero-size box with thick coloured borders).
+   Tail height = 8px; we overlap the body by 1px (bottom: -7px) so there
+   is no visible seam between body and tail. The tail color must match
+   the body background exactly (#ffffff) — the parent .bubble's
+   filter:drop-shadow will then treat body+tail as one silhouette and
+   cast a single, unified soft shadow around them. */
+.bubble-tail {
+  position: absolute;
+  width: 0;
+  height: 0;
+  /* base: 10px wide, 8px tall, pointing downward */
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 8px solid #ffffff;
+  border-bottom: 0;
+}
+
+/* top-right: bubble sits at top-right of the window, mascot is to the
+   lower-left of the bubble. Place the tail near the bubble's lower-LEFT
+   so it visually points back toward the mascot. Offset 18px from the
+   left edge to clear the 14px border-radius. */
+.bubble[data-anchor="top-right"] .bubble-tail {
+  bottom: -7px;
+  left: 18px;
+}
+
+/* top-left: mirror — tail near the lower-RIGHT of the bubble. */
+.bubble[data-anchor="top-left"] .bubble-tail {
+  bottom: -7px;
+  right: 18px;
+}
+
+/* top: bubble centered above mascot, tail straight down from the middle. */
+.bubble[data-anchor="top"] .bubble-tail {
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ========================================================================
+   Per-session label — pack-independent.
+   Anchored to the bottom-center of .mascot-wrap so the displayName sits
+   directly below the mascot regardless of pack. Hidden for the
+   __default__ session (the renderer toggles the [hidden] attribute).
+   ======================================================================== */
+.session-label {
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 180px;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #444;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.3;
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.18));
+  pointer-events: none;
+  -webkit-app-region: no-drag;
+  /* Make sure the label paints above the mascot but below any bubble that
+     happens to overlap. */
+  z-index: 2;
+}
+.session-label[hidden] {
+  display: none;
+}

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>desktopi</title>
+    <!-- Pack-specific CSS is injected/swapped at runtime as a <style id="pack-css">
+         element by renderer.js (read via IPC because file:// + sandbox blocks fetch). -->
+    <link rel="stylesheet" href="./styles.css" />
+    <!-- Optional vendor: lottie-web's prebuilt UMD player. Copied into place
+         by scripts/postinstall.js; if the file is absent the renderer falls
+         back to a "lottie unavailable" error for lottie packs but otherwise
+         keeps working (svg / image packs need nothing here). -->
+    <script src="./vendor/lottie.min.js"></script>
+  </head>
+  <body>
+    <div class="stage" id="stage">
+      <!-- Drag handle wraps the mascot; -webkit-app-region: drag in CSS makes it movable.
+           The bubble lives INSIDE mascot-wrap so its absolute coordinates are
+           anchored to the mascot, not the window — this keeps the tail glued
+           to the head regardless of text length. -->
+      <div class="mascot-wrap" id="mascot-wrap">
+        <!-- Speech bubble for status text. Positioned relative to mascot-wrap.
+             Must stay in DOM across pack swaps — see MascotRenderer.mount() in renderer.js. -->
+        <div class="bubble" id="bubble" data-anchor="top-right">
+          <span class="bubble-text" id="bubble-text">待機中</span>
+          <span class="bubble-tail" aria-hidden="true"></span>
+        </div>
+        <!-- The active MascotRenderer (svg/image/lottie) appends its own root
+             element here at runtime and removes it again on pack swap. -->
+        <!-- Per-session label: shows the displayName (basename of cwd) so the
+             user can tell stacked mascots apart. Hidden on the __default__
+             session and any session with no name. Populated by renderer.js
+             on session-info IPC. -->
+        <div class="session-label" id="session-label" hidden></div>
+      </div>
+    </div>
+    <script src="./renderer.js"></script>
+  </body>
+</html>

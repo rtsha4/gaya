@@ -1,0 +1,7 @@
+/* example-lottie: ensure the lottie host fills the mascot box. lottie-web's
+   svg renderer respects the host's dimensions, so .mascot's width/height
+   from styles.css is enough — this file mostly exists to demonstrate that
+   pack.css works for lottie packs too. */
+.mascot[data-pack="example-lottie"].lottie-host {
+  display: block;
+}

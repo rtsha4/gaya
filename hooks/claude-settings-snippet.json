@@ -1,0 +1,55 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "/Users/nishizuka-tomoya/Works/rtsha4/desktopi/hooks/on-user-prompt-submit.sh" }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "/Users/nishizuka-tomoya/Works/rtsha4/desktopi/hooks/on-pre-tool-use.sh" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "/Users/nishizuka-tomoya/Works/rtsha4/desktopi/hooks/on-post-tool-use.sh" }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          { "type": "command", "command": "/Users/nishizuka-tomoya/Works/rtsha4/desktopi/hooks/on-notification.sh" }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          { "type": "command", "command": "/Users/nishizuka-tomoya/Works/rtsha4/desktopi/hooks/on-stop.sh" }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "/Users/nishizuka-tomoya/Works/rtsha4/desktopi/hooks/on-session-start.sh" }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          { "type": "command", "command": "/Users/nishizuka-tomoya/Works/rtsha4/desktopi/hooks/on-session-end.sh" }
+        ]
+      }
+    ]
+  }
+}
