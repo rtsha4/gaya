@@ -1,0 +1,14 @@
+{
+  "id": "grave-ghost",
+  "name": "Grave Ghost",
+  "version": "1.5.0",
+  "renderer": "svg",
+  "viewBox": "0 0 200 200",
+  "size": { "width": 200, "height": 200 },
+  "bubble": {
+    "anchor": "top-right",
+    "offsetX": -5,
+    "offsetY": -10
+  },
+  "defaultState": "idle"
+}

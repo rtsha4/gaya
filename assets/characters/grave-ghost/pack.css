@@ -1,0 +1,208 @@
+/* GraveGhost Pack CSS (Joyful Update) */
+.mascot[data-pack="grave-ghost"] {
+  shape-rendering: crispEdges;
+}
+
+.mascot[data-pack="grave-ghost"] .deco-think,
+.mascot[data-pack="grave-ghost"] .deco-star {
+  opacity: 0;
+  transition: opacity 100ms step-end;
+}
+
+/* shovel-group のデフォルト位置（idle の中央値に合わせる）。
+   各 state の @keyframes が定義されていれば上書きされる。
+   未定義 state（過去は waiting/error/dragging/falling/landed で原点に飛んでいた）でも
+   この値が効くため、左上ジャンプを防げる */
+.mascot[data-pack="grave-ghost"] .shovel-group {
+  transform: translate(35px, 105px) rotate(0deg);
+}
+
+/* --- State Transitions --- */
+.mascot[data-pack="grave-ghost"].state-thinking .deco-think {
+  opacity: 1;
+  animation: gg-bubble-float 2s steps(4) infinite;
+}
+.mascot[data-pack="grave-ghost"].state-done .deco-star { opacity: 1; }
+.mascot[data-pack="grave-ghost"].state-error .eyes-normal { opacity: 0; }
+.mascot[data-pack="grave-ghost"].state-error .eyes-error { opacity: 1; }
+
+/* dragging / falling / landed では驚き顔（>_<風の点目）を表示 */
+.mascot[data-pack="grave-ghost"].state-dragging .eyes-normal,
+.mascot[data-pack="grave-ghost"].state-falling .eyes-normal,
+.mascot[data-pack="grave-ghost"].state-landed .eyes-normal { opacity: 0; }
+.mascot[data-pack="grave-ghost"].state-dragging .eyes-error,
+.mascot[data-pack="grave-ghost"].state-falling .eyes-error,
+.mascot[data-pack="grave-ghost"].state-landed .eyes-error { opacity: 1; }
+
+/* waiting: 目を黄色（警告色）に変えてアラート感を出す */
+.mascot[data-pack="grave-ghost"].state-waiting .eyes-normal rect {
+  fill: #fbbf24;
+}
+
+/* --- Animations --- */
+
+/* done: スコップを高く上向きに掲げてぴょんぴょん跳ねる */
+.mascot[data-pack="grave-ghost"].state-done .body-group {
+  animation: gg-jump 0.5s steps(4) infinite;
+  transform-origin: 100px 160px;
+}
+.mascot[data-pack="grave-ghost"].state-done .shovel-group {
+  animation: gg-victory 0.5s steps(2) infinite;
+}
+@keyframes gg-jump {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-25px); }
+}
+@keyframes gg-victory {
+  /* スコップを逆さまにして高く掲げる */
+  0% { transform: translate(40px, 60px) rotate(-165deg); }
+  100% { transform: translate(40px, 45px) rotate(-175deg); }
+}
+
+/* thinking: 左右キョロキョロ & 首をかしげる */
+.mascot[data-pack="grave-ghost"].state-thinking .face {
+  animation: gg-eyes-look 2s steps(4) infinite;
+}
+.mascot[data-pack="grave-ghost"].state-thinking .body-group {
+  animation: gg-tilt 2s steps(4) infinite;
+  transform-origin: 100px 150px;
+}
+.mascot[data-pack="grave-ghost"].state-thinking .shovel-group {
+  animation: gg-tap 1s steps(2) infinite;
+}
+
+@keyframes gg-bubble-float {
+  0%, 100% { transform: translate(155px, 50px) scale(1); }
+  50%      { transform: translate(155px, 45px) scale(1.1); }
+}
+@keyframes gg-eyes-look {
+  0%, 20%, 100% { transform: translateX(0); }
+  40%, 60%      { transform: translateX(4px); }
+  80%           { transform: translateX(-4px); }
+}
+@keyframes gg-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(-5deg); }
+}
+@keyframes gg-tap {
+  0%, 100% { transform: translate(15px, 110px) rotate(-15deg); }
+  50%      { transform: translate(18px, 108px) rotate(-18deg); }
+}
+
+/* idle: 浮遊 */
+.mascot[data-pack="grave-ghost"].state-idle .body-group {
+  animation: gg-float 2s steps(4) infinite;
+  transform-origin: 100px 160px;
+}
+.mascot[data-pack="grave-ghost"].state-idle .shovel-group {
+  animation: gg-shovel-idle 2s steps(4) infinite;
+}
+@keyframes gg-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+@keyframes gg-shovel-idle {
+  0%, 100% { transform: translate(35px, 105px) rotate(0deg); }
+  50%      { transform: translate(37px, 100px) rotate(5deg); }
+}
+
+/* working: Digging */
+.mascot[data-pack="grave-ghost"].state-working .shovel-group {
+  animation: gg-dig 0.6s steps(4) infinite;
+}
+@keyframes gg-dig {
+  0%   { transform: translate(35px, 95px) rotate(-10deg); }
+  50%  { transform: translate(35px, 125px) rotate(30deg); }
+  100% { transform: translate(35px, 95px) rotate(-10deg); }
+}
+
+/* waiting: ユーザー確認待ちで「うろたえる」演出。
+   小刻みに左右に揺れ、スコップは焦って軽くタップする */
+.mascot[data-pack="grave-ghost"].state-waiting .body-group {
+  animation: gg-fluster 0.4s steps(4) infinite;
+  transform-origin: 100px 150px;
+}
+.mascot[data-pack="grave-ghost"].state-waiting .shovel-group {
+  animation: gg-shovel-fluster 0.4s steps(2) infinite;
+}
+@keyframes gg-fluster {
+  0%   { transform: translateX(-2px); }
+  25%  { transform: translateX(2px); }
+  50%  { transform: translateX(-2px); }
+  75%  { transform: translateX(2px); }
+  100% { transform: translateX(-2px); }
+}
+@keyframes gg-shovel-fluster {
+  0%, 100% { transform: translate(35px, 105px) rotate(-8deg); }
+  50%      { transform: translate(37px, 103px) rotate(8deg); }
+}
+
+/* dragging: つままれて驚き。縦に伸びてプルプル震える。
+   スコップは取り落としたように体から離れた位置で揺れる */
+.mascot[data-pack="grave-ghost"].state-dragging .body-group {
+  animation: gg-dangle 0.2s steps(2) infinite;
+  transform-origin: 100px 160px;
+}
+.mascot[data-pack="grave-ghost"].state-dragging .shovel-group {
+  animation: gg-shovel-dangle 0.2s steps(2) infinite;
+}
+@keyframes gg-dangle {
+  0%, 100% { transform: scale(0.95, 1.1) translate(-1px, -2px); }
+  50%      { transform: scale(0.95, 1.1) translate(1px, -2px); }
+}
+@keyframes gg-shovel-dangle {
+  0%, 100% { transform: translate(20px, 95px) rotate(-30deg); }
+  50%      { transform: translate(22px, 97px) rotate(-25deg); }
+}
+
+/* falling: 落下中。さらに縦に伸びて、空気抵抗でジターする */
+.mascot[data-pack="grave-ghost"].state-falling .body-group {
+  animation: gg-fall 0.18s steps(3) infinite;
+  transform-origin: 100px 160px;
+}
+.mascot[data-pack="grave-ghost"].state-falling .shovel-group {
+  animation: gg-shovel-fall 0.18s steps(3) infinite;
+}
+@keyframes gg-fall {
+  0%   { transform: scale(0.9, 1.15) rotate(-1.5deg) translateX(-1px); }
+  50%  { transform: scale(0.9, 1.15) rotate(0deg)    translateX(1px); }
+  100% { transform: scale(0.9, 1.15) rotate(1.5deg)  translateX(-1px); }
+}
+@keyframes gg-shovel-fall {
+  0%   { transform: translate(30px, 100px) rotate(8deg); }
+  50%  { transform: translate(31px, 102px) rotate(12deg); }
+  100% { transform: translate(29px, 100px) rotate(10deg); }
+}
+
+/* landed: 着地。280ms しか出ないので 1 回再生で完結。
+   横に潰れて、スコップは地面に転がった風 */
+.mascot[data-pack="grave-ghost"].state-landed .body-group {
+  animation: gg-land-squash 0.3s steps(2) 1 forwards;
+  transform-origin: 100px 165px;
+}
+.mascot[data-pack="grave-ghost"].state-landed .face {
+  /* 着地の衝撃で目をぎゅっと閉じる風（縦に潰す） */
+  transform: scaleY(0.2);
+  transform-origin: 100px 130px;
+}
+.mascot[data-pack="grave-ghost"].state-landed .shovel-group {
+  animation: gg-shovel-land 0.3s steps(2) 1 forwards;
+}
+@keyframes gg-land-squash {
+  0%   { transform: scale(1.0, 1.0) translateY(0); }
+  50%  { transform: scale(1.15, 0.85) translateY(8px); }
+  100% { transform: scale(1.15, 0.85) translateY(8px); }
+}
+@keyframes gg-shovel-land {
+  0%   { transform: translate(30px, 110px) rotate(40deg); }
+  100% { transform: translate(30px, 145px) rotate(80deg); }
+}
+
+/* walking */
+.mascot-wrap.walking .mascot[data-pack="grave-ghost"] {
+  animation: gg-walk 0.5s steps(2) infinite;
+}
+@keyframes gg-walk {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
