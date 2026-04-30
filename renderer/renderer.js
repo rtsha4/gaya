@@ -12,7 +12,7 @@
   const VALID_OVERLAYS = new Set(OVERLAY_STATES);
   // Default-first preference list. If neither pack exists, loadPack falls back
   // to whatever the first manifest fetch happens to succeed for.
-  const PREFERRED_PACKS = ['pop', 'classic'];
+  const PREFERRED_PACKS = ['grave-ghost', 'pop', 'classic'];
   const STATE_LABELS = {
     idle: '待機中',
     thinking: '考え中…',

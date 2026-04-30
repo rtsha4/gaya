@@ -32,8 +32,9 @@ const STATE_PRIORITY = ['error', 'waiting', 'working', 'thinking', 'done', 'idle
 // Pack discovery: the renderer also reads packs (via fetch), but main scans
 // the directory for the Tray "Character" submenu so the user can swap visuals.
 const CHARACTERS_DIR = path.join(__dirname, 'assets', 'characters');
-// Default pack precedence: 'pop' wins, then 'classic', then anything else.
-const PREFERRED_DEFAULTS = ['pop', 'classic'];
+// Default pack precedence: 'grave-ghost' wins, then 'pop', then 'classic',
+// then anything else.
+const PREFERRED_DEFAULTS = ['grave-ghost', 'pop', 'classic'];
 
 // Sentinel session id used when a POST has no session_id. Always exists.
 const DEFAULT_SESSION_ID = '__default__';
