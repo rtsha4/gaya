@@ -224,7 +224,7 @@
         // bubbleText is set later by setState/updateBubble, but this is the
         // most visible place for a setup error.
         bubbleText.textContent = 'lottie 未読込';
-        console.warn('[desktopi] lottie unavailable — install lottie-web and run npm install');
+        console.warn('[gaya] lottie unavailable — install lottie-web and run npm install');
       }
     }
     _resolveAnimation(state) {
@@ -259,7 +259,7 @@
           animationData: data,
         });
       } catch (err) {
-        console.error('[desktopi] lottie loadAnimation failed:', err);
+        console.error('[gaya] lottie loadAnimation failed:', err);
       }
     }
     destroy() {
@@ -359,7 +359,7 @@
     // pack.css from the previous pack out of the way.
     if (activeRenderer) {
       try { activeRenderer.destroy(); } catch (err) {
-        console.warn('[desktopi] previous renderer destroy() failed:', err);
+        console.warn('[gaya] previous renderer destroy() failed:', err);
       }
       activeRenderer = null;
     }
@@ -375,7 +375,7 @@
     // Re-apply the effective state (realState or dragging overlay) on the
     // freshly mounted renderer so a pack swap mid-drag still looks right.
     applyEffectiveState();
-    console.log('[desktopi] loaded pack:', manifest.id, `(renderer=${rendererType})`);
+    console.log('[gaya] loaded pack:', manifest.id, `(renderer=${rendererType})`);
   }
 
   async function loadInitialPack() {
@@ -389,7 +389,7 @@
           }
         }
       } catch (err) {
-        console.warn('[desktopi] listPacks failed:', err);
+        console.warn('[gaya] listPacks failed:', err);
       }
     }
     for (const id of tryOrder) {
@@ -397,7 +397,7 @@
         await loadPack(id);
         return;
       } catch (err) {
-        console.error('[desktopi] loadPack failed:', id, err);
+        console.error('[gaya] loadPack failed:', id, err);
       }
     }
     bubbleText.textContent = 'パック読込失敗';
@@ -408,7 +408,7 @@
     try {
       await loadPack(id);
     } catch (err) {
-      console.error('[desktopi] loadPack failed:', id, err);
+      console.error('[gaya] loadPack failed:', id, err);
     }
   }
 

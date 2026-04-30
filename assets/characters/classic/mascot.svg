@@ -2,7 +2,7 @@
   class="mascot"
   viewBox="0 0 200 200"
   xmlns="http://www.w3.org/2000/svg"
-  aria-label="desktopi mascot"
+  aria-label="gaya mascot"
 >
   <!-- Shadow ellipse under the body -->
   <ellipse class="shadow" cx="100" cy="170" rx="50" ry="8" />

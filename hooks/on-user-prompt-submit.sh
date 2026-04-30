@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code UserPromptSubmit hook -> notify desktopi that the agent is thinking.
+# Claude Code UserPromptSubmit hook -> notify gaya that the agent is thinking.
 # Must always exit 0 so Claude Code is never blocked by this script.
 
 INPUT=$(cat)

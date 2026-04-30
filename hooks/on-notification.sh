@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code Notification hook -> desktopi "waiting" (user attention needed).
+# Claude Code Notification hook -> gaya "waiting" (user attention needed).
 # Reads hook event JSON on stdin and forwards session_id + cwd if present.
 
 INPUT=$(cat)

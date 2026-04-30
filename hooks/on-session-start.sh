@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Claude Code SessionStart hook -> desktopi "idle".
+# Claude Code SessionStart hook -> gaya "idle".
 # This is the *first* event for a new session, so it's also the trigger that
-# tells desktopi to spin up a fresh mascot window for that session.
+# tells gaya to spin up a fresh mascot window for that session.
 
 INPUT=$(cat)
 

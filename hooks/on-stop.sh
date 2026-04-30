@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code Stop hook -> desktopi "done" (agent finished its turn).
+# Claude Code Stop hook -> gaya "done" (agent finished its turn).
 # Reads hook event JSON on stdin and forwards session_id + cwd if present.
 
 INPUT=$(cat)

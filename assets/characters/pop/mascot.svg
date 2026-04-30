@@ -2,7 +2,7 @@
   class="mascot"
   viewBox="0 0 200 200"
   xmlns="http://www.w3.org/2000/svg"
-  aria-label="desktopi pop mascot"
+  aria-label="gaya pop mascot"
 >
   <!-- Soft drop shadow on the floor -->
   <ellipse class="shadow" cx="100" cy="172" rx="48" ry="7" />

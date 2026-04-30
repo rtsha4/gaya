@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Claude Code PreToolUse hook -> desktopi "working".
+# Claude Code PreToolUse hook -> gaya "working".
 #
 # Reads the hook event JSON from stdin (Claude Code passes session_id, cwd,
 # transcript_path, tool_name, etc. as a single JSON object) and forwards
-# session_id + cwd to desktopi so each session gets its own mascot.
+# session_id + cwd to gaya so each session gets its own mascot.
 #
 # Notes:
 # - We avoid `jq` (not always installed). `python3` ships with macOS.

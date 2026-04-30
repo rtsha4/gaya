@@ -1,5 +1,5 @@
 {
-  "name": "desktopi",
+  "name": "gaya",
   "version": "0.1.0",
   "description": "Desktop mascot that animates based on Claude Code CLI agent state.",
   "main": "main.js",

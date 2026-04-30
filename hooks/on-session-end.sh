@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Claude Code SessionEnd hook -> tell desktopi to retire this session's mascot.
+# Claude Code SessionEnd hook -> tell gaya to retire this session's mascot.
 # We send state=idle plus session_end:true so main.js knows to fade out and
 # destroy the window after a short linger.
 

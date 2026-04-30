@@ -2,7 +2,7 @@
 /*
  * install-hooks.js
  *
- * Merge desktopi's Claude Code hook entries into ~/.claude/settings.json.
+ * Merge gaya's Claude Code hook entries into ~/.claude/settings.json.
  *
  * Usage:
  *   node scripts/install-hooks.js              # install (idempotent)
@@ -71,8 +71,8 @@ function parseArgs(argv) {
 function printHelp() {
   console.log(`Usage: node scripts/install-hooks.js [--uninstall] [--dry-run]
 
-  (no flags)   Install desktopi hooks into ~/.claude/settings.json
-  --uninstall  Remove desktopi hooks from ~/.claude/settings.json
+  (no flags)   Install gaya hooks into ~/.claude/settings.json
+  --uninstall  Remove gaya hooks from ~/.claude/settings.json
   --dry-run    Show changes without writing
   -h, --help   Show this help`);
 }
@@ -207,7 +207,7 @@ function install(flags) {
   }
 
   if (added.length === 0) {
-    console.log(`${C.green}All desktopi hooks already installed. Nothing to do.${C.reset}`);
+    console.log(`${C.green}All gaya hooks already installed. Nothing to do.${C.reset}`);
     if (chmodded.length) {
       console.log(`${C.dim}chmod +x applied to ${chmodded.length} script(s).${C.reset}`);
     }
@@ -218,7 +218,7 @@ function install(flags) {
   const backupPath = existed ? backupSettings() : null;
   atomicWrite(SETTINGS_PATH, nextJson);
 
-  console.log(`${C.green}${C.bold}Installed desktopi hooks.${C.reset}`);
+  console.log(`${C.green}${C.bold}Installed gaya hooks.${C.reset}`);
   printSummary({ added, skipped, chmodded, backupPath });
   printQuickCheck();
 }
@@ -279,21 +279,21 @@ function uninstall(flags) {
 
   if (flags.dryRun) {
     console.log(`${C.bold}[dry-run] no changes will be written${C.reset}`);
-    console.log(`${C.cyan}Would remove ${removed.length} desktopi hook entr${removed.length === 1 ? 'y' : 'ies'}.${C.reset}`);
+    console.log(`${C.cyan}Would remove ${removed.length} gaya hook entr${removed.length === 1 ? 'y' : 'ies'}.${C.reset}`);
     for (const r of removed) console.log(`  ${C.dim}- ${r.event}: ${r.command}${C.reset}`);
     printDiffPreview(prevJson, nextJson);
     return;
   }
 
   if (removed.length === 0) {
-    console.log(`${C.green}No desktopi hook entries found. Nothing to do.${C.reset}`);
+    console.log(`${C.green}No gaya hook entries found. Nothing to do.${C.reset}`);
     return;
   }
 
   const backupPath = backupSettings();
   atomicWrite(SETTINGS_PATH, nextJson);
 
-  console.log(`${C.green}${C.bold}Removed desktopi hooks.${C.reset}`);
+  console.log(`${C.green}${C.bold}Removed gaya hooks.${C.reset}`);
   console.log(`${C.cyan}Backup:${C.reset} ${backupPath}`);
   console.log(`${C.cyan}Removed entries:${C.reset} ${removed.length}`);
   for (const r of removed) console.log(`  ${C.dim}- ${r.event}: ${r.command}${C.reset}`);
@@ -315,7 +315,7 @@ function printSummary({ added, skipped, chmodded, backupPath }) {
 
 function printQuickCheck() {
   console.log('');
-  console.log(`${C.bold}Verify desktopi is reachable:${C.reset}`);
+  console.log(`${C.bold}Verify gaya is reachable:${C.reset}`);
   console.log(`  curl http://127.0.0.1:39999/health`);
 }
 

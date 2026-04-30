@@ -28,7 +28,7 @@ const DEST = path.join(DEST_DIR, 'lottie.min.js');
 function main() {
   if (!fs.existsSync(SRC)) {
     console.warn(
-      `[desktopi postinstall] lottie-web not found at ${SRC}; skipping copy. ` +
+      `[gaya postinstall] lottie-web not found at ${SRC}; skipping copy. ` +
         `Run \`npm install lottie-web\` if you want Lottie pack support.`,
     );
     return;
@@ -36,16 +36,16 @@ function main() {
   try {
     fs.mkdirSync(DEST_DIR, { recursive: true });
     fs.copyFileSync(SRC, DEST);
-    console.log(`[desktopi postinstall] copied lottie.min.js -> ${path.relative(process.cwd(), DEST)}`);
+    console.log(`[gaya postinstall] copied lottie.min.js -> ${path.relative(process.cwd(), DEST)}`);
   } catch (err) {
-    console.warn('[desktopi postinstall] failed to copy lottie.min.js:', err.message);
+    console.warn('[gaya postinstall] failed to copy lottie.min.js:', err.message);
   }
 }
 
 try {
   main();
 } catch (err) {
-  console.warn('[desktopi postinstall] unexpected error (ignored):', err && err.message);
+  console.warn('[gaya postinstall] unexpected error (ignored):', err && err.message);
 }
 
 // Always exit success so npm install doesn't abort on lottie issues.

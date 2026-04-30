@@ -1,4 +1,4 @@
-// Electron main process for desktopi — a small desktop mascot that reacts to
+// Electron main process for gaya — a small desktop mascot that reacts to
 // Claude Code hook events posted to a local HTTP server.
 //
 // Multi-session: a single Electron app hosts one mascot window per active
@@ -82,7 +82,7 @@ function loadSettings() {
     }
   } catch (err) {
     if (err && err.code !== 'ENOENT') {
-      console.warn('[desktopi] failed to read settings.json:', err.message);
+      console.warn('[gaya] failed to read settings.json:', err.message);
     }
     // Otherwise: first run; defaults stand.
   }
@@ -98,7 +98,7 @@ function saveSettings() {
     fs.mkdirSync(path.dirname(getSettingsPath()), { recursive: true });
     fs.writeFileSync(getSettingsPath(), JSON.stringify(payload, null, 2), 'utf8');
   } catch (err) {
-    console.warn('[desktopi] failed to write settings.json:', err.message);
+    console.warn('[gaya] failed to write settings.json:', err.message);
   }
 }
 
@@ -194,7 +194,7 @@ function discoverPacks() {
   try {
     entries = fs.readdirSync(CHARACTERS_DIR, { withFileTypes: true });
   } catch (err) {
-    console.warn('[desktopi] characters directory missing:', err.message);
+    console.warn('[gaya] characters directory missing:', err.message);
     return [];
   }
   const packs = [];
@@ -205,12 +205,12 @@ function discoverPacks() {
       const raw = fs.readFileSync(manifestPath, 'utf8');
       const manifest = JSON.parse(raw);
       if (!manifest || !manifest.id) {
-        console.warn(`[desktopi] pack '${entry.name}' has no id, skipping`);
+        console.warn(`[gaya] pack '${entry.name}' has no id, skipping`);
         continue;
       }
       packs.push({ id: manifest.id, name: manifest.name || manifest.id });
     } catch (err) {
-      console.warn(`[desktopi] could not load pack '${entry.name}':`, err.message);
+      console.warn(`[gaya] could not load pack '${entry.name}':`, err.message);
     }
   }
   return packs;
@@ -413,7 +413,7 @@ function evictOldestSession() {
     if (!victim || s.lastActivity < victim.lastActivity) victim = s;
   }
   if (victim) {
-    console.log('[desktopi] evicting session for capacity:', victim.id);
+    console.log('[gaya] evicting session for capacity:', victim.id);
     destroySession(victim);
   }
 }
@@ -464,7 +464,7 @@ function reapIdleSessions() {
     if (s.isDefault) continue;
     if (s.endLingerTimer) continue;
     if (now - s.lastActivity >= SESSION_IDLE_TIMEOUT_MS) {
-      console.log('[desktopi] reaping idle session:', s.id);
+      console.log('[gaya] reaping idle session:', s.id);
       destroySession(s);
     }
   }
@@ -942,8 +942,8 @@ function updateTrayForAggregate() {
   const title = activeCount > 1 ? `${emoji}×${activeCount}` : emoji;
   tray.setTitle(title);
   const tip = activeCount === 1
-    ? `desktopi · ${agg}`
-    : `desktopi · ${activeCount} sessions · ${agg}`;
+    ? `gaya · ${agg}`
+    : `gaya · ${activeCount} sessions · ${agg}`;
   tray.setToolTip(tip);
 }
 
@@ -1013,7 +1013,7 @@ function rebuildTrayMenu() {
     { type: 'separator' },
     { label: 'Sessions', submenu: sessionEntries },
     { type: 'separator' },
-    { label: `desktopi (port ${boundPort ?? '—'})`, enabled: false },
+    { label: `gaya (port ${boundPort ?? '—'})`, enabled: false },
     { type: 'separator' },
     { label: 'Character', submenu: characterSubmenu },
     { label: 'Movement', submenu: movementSubmenu },
@@ -1170,10 +1170,10 @@ app.whenReady().then(async () => {
 
   try {
     const port = await startHttpServer();
-    console.log(`[desktopi] state server listening on http://127.0.0.1:${port}`);
+    console.log(`[gaya] state server listening on http://127.0.0.1:${port}`);
     rebuildTrayMenu();
   } catch (err) {
-    console.error('[desktopi] failed to start HTTP server:', err);
+    console.error('[gaya] failed to start HTTP server:', err);
   }
 });
 
@@ -1237,7 +1237,7 @@ async function readOptionalCss(packDir, packId) {
     return await fs.promises.readFile(path.join(packDir, 'pack.css'), 'utf8');
   } catch (cssErr) {
     if (cssErr && cssErr.code !== 'ENOENT') {
-      console.warn(`[desktopi] pack '${packId}' pack.css read error, using empty css:`, cssErr.message);
+      console.warn(`[gaya] pack '${packId}' pack.css read error, using empty css:`, cssErr.message);
     }
     return '';
   }
@@ -1278,21 +1278,21 @@ ipcMain.handle('pack:load', async (_event, id) => {
       for (const [stateName, relPath] of Object.entries(states)) {
         const abs = resolvePackAsset(dir, relPath);
         if (!abs) {
-          console.warn(`[desktopi] pack '${id}' state '${stateName}' has unsafe path; ignoring`);
+          console.warn(`[gaya] pack '${id}' state '${stateName}' has unsafe path; ignoring`);
           continue;
         }
         try {
           await fs.promises.access(abs, fs.constants.R_OK);
           sawAny = true;
         } catch {
-          console.warn(`[desktopi] pack '${id}' state '${stateName}' file missing: ${relPath}`);
+          console.warn(`[gaya] pack '${id}' state '${stateName}' file missing: ${relPath}`);
         }
       }
       if (!sawAny) {
-        console.warn(`[desktopi] pack '${id}' image renderer has no readable state assets`);
+        console.warn(`[gaya] pack '${id}' image renderer has no readable state assets`);
       }
       if (!states[fallbackState]) {
-        console.warn(`[desktopi] pack '${id}' image renderer fallbackState '${fallbackState}' not declared`);
+        console.warn(`[gaya] pack '${id}' image renderer fallbackState '${fallbackState}' not declared`);
       }
       return { id: manifest.id, manifest, css };
     }
@@ -1303,14 +1303,14 @@ ipcMain.handle('pack:load', async (_event, id) => {
       for (const [stateName, relPath] of Object.entries(states)) {
         const abs = resolvePackAsset(dir, relPath);
         if (!abs) {
-          console.warn(`[desktopi] pack '${id}' lottie state '${stateName}' has unsafe path; ignoring`);
+          console.warn(`[gaya] pack '${id}' lottie state '${stateName}' has unsafe path; ignoring`);
           continue;
         }
         try {
           const raw = await fs.promises.readFile(abs, 'utf8');
           animations[stateName] = JSON.parse(raw);
         } catch (animErr) {
-          console.warn(`[desktopi] pack '${id}' lottie state '${stateName}' load failed:`, animErr.message);
+          console.warn(`[gaya] pack '${id}' lottie state '${stateName}' load failed:`, animErr.message);
         }
       }
       return { id: manifest.id, manifest, css, animations };
@@ -1318,7 +1318,7 @@ ipcMain.handle('pack:load', async (_event, id) => {
 
     throw new Error(`unhandled renderer type '${rendererType}'`);
   } catch (err) {
-    console.error(`[desktopi] pack:load failed for '${id}':`, err);
+    console.error(`[gaya] pack:load failed for '${id}':`, err);
     throw err;
   }
 });
