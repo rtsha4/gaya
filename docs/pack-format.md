@@ -6,6 +6,7 @@
 
 - Packs live under `assets/characters/<id>/`.
 - On startup, `main.js` walks `assets/characters/*` and reads each `manifest.json`. There is no separate registry — adding a directory with a valid manifest is sufficient.
+- Packs can also be registered at runtime from any folder via Tray → "Add Pack from Folder…". The folder must contain a `manifest.json` matching the same schema described below; the manifest is validated before registration. Registered absolute paths are persisted in `~/Library/Application Support/gaya/settings.json` under `externalPackPaths`. **Id collisions are rejected** — built-in ids win, and the first external registration wins over later duplicates. Removing an external pack is done via Tray → "Remove External Pack" → click.
 - Startup default is chosen by the `PREFERRED_DEFAULTS` array in `main.js` (currently: `grave-ghost` → `pop` → `classic` → first discovered).
 - Pack switching at runtime: Tray menu → Character submenu → click. This sends a `switch-pack` IPC to all mascot windows. **Selection is not persisted across restarts.**
 

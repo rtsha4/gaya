@@ -6,7 +6,7 @@
 
 | Process | File | Responsibility |
 |---|---|---|
-| Main | `main.js` | HTTP server, session map, BrowserWindow lifecycle, Tray, movement loop (50 ms), drag/fall physics, session reaper (60 s), pack discovery, settings persistence |
+| Main | `main.js` | HTTP server, session map, BrowserWindow lifecycle, Tray, movement loop (50 ms), drag/fall physics, session reaper (60 s), pack discovery (built-ins + external folders), settings persistence |
 | Preload | `preload.js` | Sandbox-mode `contextBridge`. Exposes the entire `window.api` surface; renderers have no direct `ipcRenderer` access. |
 | Renderer (mascot) | `renderer/renderer.js` | One window per session. Owns the active `MascotRenderer` instance and the speech bubble. |
 | Renderer (preview) | `renderer/preview.js`, `renderer/preview.html` | Optional pack-authoring window. Singleton. Watches pack files for live reload. |
@@ -77,8 +77,8 @@ All channels live on `preload.js` and are fanned out from `main.js`. Channel nam
 | Channel | Direction | Purpose |
 |---|---|---|
 | `renderer-ready` | send | Renderer announces it's ready to receive `state`/`session-info`. |
-| `pack:list` | invoke | Returns metadata for all discovered packs. |
-| `pack:load` | invoke | Returns manifest + asset payload for a given pack id. |
+| `pack:list` | invoke | Returns metadata for all discovered packs. Each entry includes `{id, name, dir, external}`; `external: true` flags packs registered from arbitrary folders via Tray → "Add Pack from Folder…". |
+| `pack:load` | invoke | Returns manifest + asset payload for a given pack id. Resolves the pack directory through the discovered list, so external packs work. |
 | `preview:open` | invoke | Opens the singleton preview window. |
 | `preview:reveal` | invoke | Reveals a pack directory in Finder. |
 | `preview:validate` | invoke | Validates a pack's structure, returns errors. |
@@ -112,6 +112,7 @@ Persisted keys:
 - `movementWhen` (`always | idle | off`)
 - `movementStyle` (`random | pacing`)
 - `clickThrough` (boolean)
+- `externalPackPaths` (array of absolute folder paths registered via Tray → "Add Pack from Folder…"; missing paths at startup are logged and skipped silently, but kept in the file so the registration survives a temporarily-unavailable disk)
 
 Pack selection is **not** persisted — startup always uses the hardcoded `PREFERRED_DEFAULTS` order in `main.js` (currently prefers `grave-ghost`, then `pop`, then `classic`, then the first discovered pack).
 

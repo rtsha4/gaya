@@ -6,7 +6,7 @@
 // and routes each update to the right window. A built-in `__default__`
 // session always exists so older curl tests (no session_id) keep working.
 
-const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, shell, dialog } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const http = require('node:http');
@@ -52,9 +52,14 @@ let tray = null;
 let clickThrough = false;
 let httpServer = null;
 let boundPort = null;
-// Available packs ([{id, name}]) and the currently active id for the Tray menu.
+// Available packs ([{id, name, dir, external}]) and the currently active id for
+// the Tray menu. `external` distinguishes user-registered folders (added via
+// Tray → "Add Pack from Folder…") from built-ins under CHARACTERS_DIR.
 let availablePacks = [];
 let activePackId = null;
+// Absolute paths for externally registered packs. Persisted in settings.json
+// under `externalPackPaths` so they survive restarts.
+let externalPackPaths = [];
 
 // ---- Persistent settings ----
 // Stored under app.getPath('userData')/settings.json. Only specific keys are
@@ -80,6 +85,20 @@ function loadSettings() {
       if (VALID_MOVEMENT_WHEN.has(parsed.movementWhen)) movementWhen = parsed.movementWhen;
       if (VALID_MOVEMENT_STYLE.has(parsed.movementStyle)) movementStyle = parsed.movementStyle;
       if (typeof parsed.clickThrough === 'boolean') clickThrough = parsed.clickThrough;
+      if (Array.isArray(parsed.externalPackPaths)) {
+        const seen = new Set();
+        const out = [];
+        for (const p of parsed.externalPackPaths) {
+          if (typeof p !== 'string') continue;
+          const trimmed = p.trim();
+          if (!trimmed) continue;
+          const resolved = path.resolve(trimmed);
+          if (seen.has(resolved)) continue;
+          seen.add(resolved);
+          out.push(resolved);
+        }
+        externalPackPaths = out;
+      }
     }
   } catch (err) {
     if (err && err.code !== 'ENOENT') {
@@ -94,6 +113,7 @@ function saveSettings() {
     movementWhen,
     movementStyle,
     clickThrough,
+    externalPackPaths,
   };
   try {
     fs.mkdirSync(path.dirname(getSettingsPath()), { recursive: true });
@@ -191,17 +211,20 @@ let sessionReapTimer = null;
 
 function discoverPacks() {
   // Read directory synchronously at startup; packs are static on disk.
+  // External packs (registered via Tray) are appended after built-ins; built-in
+  // ids win on collision, and the first external wins over later duplicates.
+  const packs = [];
+  const seenIds = new Set();
   let entries = [];
   try {
     entries = fs.readdirSync(CHARACTERS_DIR, { withFileTypes: true });
   } catch (err) {
     console.warn('[gaya] characters directory missing:', err.message);
-    return [];
   }
-  const packs = [];
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    const manifestPath = path.join(CHARACTERS_DIR, entry.name, 'manifest.json');
+    const dir = path.join(CHARACTERS_DIR, entry.name);
+    const manifestPath = path.join(dir, 'manifest.json');
     try {
       const raw = fs.readFileSync(manifestPath, 'utf8');
       const manifest = JSON.parse(raw);
@@ -209,10 +232,52 @@ function discoverPacks() {
         console.warn(`[gaya] pack '${entry.name}' has no id, skipping`);
         continue;
       }
-      packs.push({ id: manifest.id, name: manifest.name || manifest.id });
+      if (seenIds.has(manifest.id)) {
+        console.warn(`[gaya] duplicate built-in pack id '${manifest.id}', skipping`);
+        continue;
+      }
+      seenIds.add(manifest.id);
+      packs.push({ id: manifest.id, name: manifest.name || manifest.id, dir, external: false });
     } catch (err) {
       console.warn(`[gaya] could not load pack '${entry.name}':`, err.message);
     }
+  }
+  // External packs from settings. Skip silently on any failure (do NOT prune
+  // from settings — the path may temporarily be unavailable).
+  for (const extPath of externalPackPaths) {
+    try {
+      const st = fs.statSync(extPath);
+      if (!st.isDirectory()) {
+        console.warn(`[gaya] external pack path is not a directory, skipping: ${extPath}`);
+        continue;
+      }
+    } catch (err) {
+      console.warn(`[gaya] external pack path missing, skipping: ${extPath} (${err.message})`);
+      continue;
+    }
+    const manifestPath = path.join(extPath, 'manifest.json');
+    let manifest;
+    try {
+      const raw = fs.readFileSync(manifestPath, 'utf8');
+      manifest = JSON.parse(raw);
+    } catch (err) {
+      console.warn(`[gaya] external pack manifest unreadable, skipping: ${extPath} (${err.message})`);
+      continue;
+    }
+    if (!manifest || typeof manifest !== 'object' || !manifest.id || typeof manifest.id !== 'string') {
+      console.warn(`[gaya] external pack manifest invalid (no id), skipping: ${extPath}`);
+      continue;
+    }
+    if (!PACK_ID_RE.test(manifest.id)) {
+      console.warn(`[gaya] external pack id '${manifest.id}' is not a valid slug, skipping: ${extPath}`);
+      continue;
+    }
+    if (seenIds.has(manifest.id)) {
+      console.warn(`[gaya] external pack id '${manifest.id}' collides with an existing pack, skipping: ${extPath}`);
+      continue;
+    }
+    seenIds.add(manifest.id);
+    packs.push({ id: manifest.id, name: manifest.name || manifest.id, dir: extPath, external: true });
   }
   return packs;
 }
@@ -1006,6 +1071,12 @@ function rebuildTrayMenu() {
   }
   if (!sessionEntries.length) sessionEntries.push({ label: '(no sessions)', enabled: false });
 
+  const externalPacks = availablePacks.filter((p) => p.external);
+  const removeExternalSubmenu = externalPacks.map((p) => ({
+    label: p.name,
+    click: () => removeExternalPack(p.id),
+  }));
+
   const menu = Menu.buildFromTemplate([
     {
       label: visible ? 'Hide Mascots' : 'Show Mascots',
@@ -1017,6 +1088,12 @@ function rebuildTrayMenu() {
     { label: `gaya (port ${boundPort ?? '—'})`, enabled: false },
     { type: 'separator' },
     { label: 'Character', submenu: characterSubmenu },
+    { label: 'Add Pack from Folder…', click: () => addExternalPackFlow() },
+    {
+      label: 'Remove External Pack',
+      submenu: removeExternalSubmenu,
+      enabled: removeExternalSubmenu.length > 0,
+    },
     { label: 'Pack Preview…', click: () => openPreviewWindow() },
     { label: 'Movement', submenu: movementSubmenu },
     { label: 'Reset Position', click: () => resetAllWindowPositions() },
@@ -1043,6 +1120,84 @@ function rebuildTrayMenu() {
 function createTray() {
   tray = new Tray(buildTrayIcon());
   updateTrayForAggregate();
+  rebuildTrayMenu();
+}
+
+// ---- External pack registration ----
+
+async function addExternalPackFlow() {
+  let picked;
+  try {
+    const res = await dialog.showOpenDialog({
+      properties: ['openDirectory'],
+      title: 'Choose pack folder',
+    });
+    if (res.canceled || !res.filePaths || !res.filePaths.length) return;
+    picked = path.resolve(res.filePaths[0]);
+  } catch (err) {
+    console.warn('[gaya] folder picker failed:', err && err.message);
+    return;
+  }
+
+  if (externalPackPaths.includes(picked)) {
+    try {
+      await dialog.showMessageBox({
+        type: 'info',
+        message: 'This folder is already registered as a pack.',
+        detail: picked,
+      });
+    } catch {}
+    return;
+  }
+
+  let validation;
+  try {
+    validation = await validatePackDir(picked, null);
+  } catch (err) {
+    dialog.showErrorBox('Invalid pack', `Could not validate folder:\n${err && err.message}`);
+    return;
+  }
+  if (!validation.ok) {
+    dialog.showErrorBox('Invalid pack', validation.errors.join('\n'));
+    return;
+  }
+
+  const manifest = validation.manifest;
+  const newId = manifest && manifest.id;
+  if (!newId || typeof newId !== 'string' || !PACK_ID_RE.test(newId)) {
+    dialog.showErrorBox('Invalid pack', `manifest.id is missing or not a valid slug: ${JSON.stringify(newId)}`);
+    return;
+  }
+  if (availablePacks.find((p) => p.id === newId)) {
+    dialog.showErrorBox('Pack id already registered', `Pack id already registered: ${newId}`);
+    return;
+  }
+
+  externalPackPaths.push(picked);
+  saveSettings();
+  availablePacks = discoverPacks();
+  // If discovery dropped the pack for some reason, fall back gracefully.
+  if (!availablePacks.find((p) => p.id === newId)) {
+    rebuildTrayMenu();
+    return;
+  }
+  switchPack(newId);
+}
+
+function removeExternalPack(id) {
+  const target = availablePacks.find((p) => p.id === id && p.external);
+  if (!target) return;
+  externalPackPaths = externalPackPaths.filter((p) => p !== target.dir);
+  saveSettings();
+  availablePacks = discoverPacks();
+  if (activePackId === id) {
+    const fallback = pickDefaultPack(availablePacks);
+    if (fallback) {
+      switchPack(fallback);
+      return;
+    }
+    activePackId = null;
+  }
   rebuildTrayMenu();
 }
 
@@ -1254,7 +1409,10 @@ ipcMain.handle('pack:load', async (_event, id) => {
     if (typeof id !== 'string' || !PACK_ID_RE.test(id)) {
       throw new Error(`invalid pack id: ${JSON.stringify(id)}`);
     }
-    const dir = path.join(CHARACTERS_DIR, id);
+    // Resolve the pack directory through availablePacks so external packs work.
+    // Defensive fallback: if id isn't registered, try the built-in path.
+    const known = availablePacks.find((p) => p.id === id);
+    const dir = known ? known.dir : path.join(CHARACTERS_DIR, id);
     const manifestRaw = await fs.promises.readFile(path.join(dir, 'manifest.json'), 'utf8');
     const manifest = JSON.parse(manifestRaw);
     if (!manifest || !manifest.id) {
@@ -1436,19 +1594,18 @@ ipcMain.handle('preview:reveal', (_event, id) => {
   if (typeof id !== 'string' || !PACK_ID_RE.test(id)) {
     return { ok: false, error: 'invalid pack id' };
   }
-  const dir = path.join(CHARACTERS_DIR, id);
+  const known = availablePacks.find((p) => p.id === id);
+  const dir = known ? known.dir : path.join(CHARACTERS_DIR, id);
   shell.openPath(dir);
   return { ok: true };
 });
 
-ipcMain.handle('preview:validate', async (_event, id) => {
-  const result = { ok: true, errors: [], warnings: [], files: [] };
-  if (typeof id !== 'string' || !PACK_ID_RE.test(id)) {
-    result.ok = false;
-    result.errors.push('invalid pack id');
-    return result;
-  }
-  const dir = path.join(CHARACTERS_DIR, id);
+// Validate a pack directory. If `expectedIdOrNull` is provided, mismatches
+// between manifest.id and that id become a warning (matches the historical
+// preview:validate behavior, which expected manifest.id === folder name). The
+// add-pack flow passes null because it accepts whatever id the manifest claims.
+async function validatePackDir(dir, expectedIdOrNull) {
+  const result = { ok: true, errors: [], warnings: [], files: [], manifest: null };
   let manifest = null;
   try {
     const raw = await fs.promises.readFile(path.join(dir, 'manifest.json'), 'utf8');
@@ -1464,10 +1621,11 @@ ipcMain.handle('preview:validate', async (_event, id) => {
     result.errors.push('manifest is not an object');
     return result;
   }
+  result.manifest = manifest;
   if (!manifest.id || typeof manifest.id !== 'string') {
     result.errors.push('manifest.id missing or not a string');
-  } else if (manifest.id !== id) {
-    result.warnings.push(`manifest.id '${manifest.id}' does not match folder '${id}'`);
+  } else if (expectedIdOrNull && manifest.id !== expectedIdOrNull) {
+    result.warnings.push(`manifest.id '${manifest.id}' does not match folder '${expectedIdOrNull}'`);
   }
   if (manifest.name && typeof manifest.name !== 'string') {
     result.errors.push('manifest.name must be a string');
@@ -1573,6 +1731,21 @@ ipcMain.handle('preview:validate', async (_event, id) => {
 
   if (result.errors.length) result.ok = false;
   return result;
+}
+
+ipcMain.handle('preview:validate', async (_event, id) => {
+  if (typeof id !== 'string' || !PACK_ID_RE.test(id)) {
+    return { ok: false, errors: ['invalid pack id'], warnings: [], files: [] };
+  }
+  // Look up registered pack first (so external packs work in the preview UI);
+  // fall back to the built-in directory join for safety.
+  const known = availablePacks.find((p) => p.id === id);
+  const dir = known ? known.dir : path.join(CHARACTERS_DIR, id);
+  const result = await validatePackDir(dir, id);
+  // Strip the manifest from the IPC response to preserve the pre-existing
+  // shape (the preview renderer doesn't expect a `manifest` field here).
+  const { manifest: _ignored, ...rest } = result;
+  return rest;
 });
 
 ipcMain.on('pack:watch', (event, packId) => {
