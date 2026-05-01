@@ -54,9 +54,9 @@ The Tray title shows an emoji that reflects the **aggregate** state across all s
 
 ## Window layout
 
-- Per-session window: 280×240 px, transparent, panel-type on macOS (always-on-top across Spaces, screen-saver level).
-- Mascot content area: 200×200 px, centered.
-- Multi-mascot tiling: bottom-right anchor, 220 px stride leftward, wraps upward when the row fills.
+- Per-session window: 360×280 px, transparent, panel-type on macOS (always-on-top across Spaces, screen-saver level).
+- Mascot content area: 200×200 px, centered (left-/right-aligned when the active bubble anchor is `right`/`left`, so the bubble has room to extend horizontally on the opposite side).
+- Multi-mascot tiling: bottom-right anchor, 280 px stride leftward, wraps upward when the row fills.
 - Click-through is a setting (see Settings).
 
 ## IPC channels
@@ -72,7 +72,7 @@ All channels live on `preload.js` and are fanned out from `main.js`. Channel nam
 | `movement` | `{walking, direction}` | `direction` is `'left'` or `'right'`. |
 | `overlay` | `{overlay}` | `overlay` is one of `'dragging' \| 'falling' \| 'landed' \| null`. |
 | `session-info` | `{sessionId, displayName, cwd}` | Sent once after `renderer-ready`. |
-| `bubble-position` | `{position}` | Global bubble-anchor override. `position` is one of `'auto' \| 'top-right' \| 'top-left' \| 'top'`. `'auto'` defers to the active pack's `manifest.bubble.anchor`. Sent once after `renderer-ready` and again on every Tray → Bubble Position change. |
+| `bubble-position` | `{position}` | Global bubble-anchor override. `position` is one of `'auto' \| 'top-right' \| 'top-left' \| 'top' \| 'right' \| 'left'`. `'auto'` defers to the active pack's `manifest.bubble.anchor`. Sent once after `renderer-ready` and again on every Tray → Bubble Position change. |
 | `preview:pack-changed` | `{packId}` | Preview window only. Fired by file watcher. |
 
 ### Renderer → main
@@ -114,7 +114,7 @@ Persisted keys:
 
 - `movementWhen` (`always | idle | off`)
 - `movementStyle` (`random | pacing`)
-- `bubblePosition` (`auto | top-right | top-left | top`; `auto` defers to the active pack's `manifest.bubble.anchor`, anything else overrides every session window)
+- `bubblePosition` (`auto | top-right | top-left | top | right | left`; `auto` defers to the active pack's `manifest.bubble.anchor`, anything else overrides every session window)
 - `clickThrough` (boolean)
 - `externalPackPaths` (array of absolute folder paths registered via Tray → "Add Pack from Folder…"; missing paths at startup are logged and skipped silently, but kept in the file so the registration survives a temporarily-unavailable disk)
 

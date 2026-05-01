@@ -31,6 +31,18 @@ html, body {
   box-sizing: border-box;
 }
 
+/* Sideways bubble anchors (right / left) need the mascot pushed to one side
+   so the bubble has space to extend horizontally on the opposite side without
+   leaving the window. Top-anchored bubbles keep the default centered layout. */
+.stage[data-bubble-anchor="right"] {
+  align-items: flex-start;
+  padding-left: 12px;
+}
+.stage[data-bubble-anchor="left"] {
+  align-items: flex-end;
+  padding-right: 12px;
+}
+
 .mascot-wrap {
   width: 200px;
   height: 200px;
@@ -71,10 +83,10 @@ html, body {
   left: 105px;
   right: auto;
   bottom: auto;
-  /* Narrower than before (was 150px) since we're now anchored to the
-     mascot (200px wide) rather than the window. Long messages still
-     get ellipsized by .bubble-text. */
-  max-width: 130px;
+  /* Wider than before (was 130px) so multi-line wrapped text stays readable
+     without being clipped quickly. Per-anchor variants below may tighten
+     this for sideways anchors where window width is the bottleneck. */
+  max-width: 160px;
   padding: 8px 12px;
   background: #ffffff;
   color: #1a1a1a;
@@ -101,13 +113,19 @@ html, body {
      .bubble-tail which is positioned outside the rounded body. */
 }
 
-/* Single-line ellipsis on the inner text span. */
+/* Multi-line clamp on the inner text span: wrap up to 3 lines, then ellipsis.
+   `-webkit-line-clamp` is supported in Electron/Chromium so we lean on it
+   directly. word-break/overflow-wrap let very long unbroken tokens (paths,
+   long English words) still wrap instead of overflowing the bubble width. */
 .bubble-text {
-  display: block;
-  max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 
 /* When idle, dim the bubble slightly so it doesn't dominate. */
@@ -153,6 +171,31 @@ html, body {
   transform: translateX(-50%);
 }
 
+/* right: bubble sits to the right of the mascot, vertically centered.
+   Tail points back toward the mascot from the bubble's left edge.
+   Slightly tighter max-width than top-anchored bubbles because window
+   width (not vertical room) is the binding constraint here. */
+.bubble[data-anchor="right"] {
+  top: 50%;
+  left: 100%;
+  right: auto;
+  bottom: auto;
+  margin-left: 8px;
+  transform: translateY(-50%);
+  max-width: 130px;
+}
+
+/* left: mirror of right. */
+.bubble[data-anchor="left"] {
+  top: 50%;
+  right: 100%;
+  left: auto;
+  bottom: auto;
+  margin-right: 8px;
+  transform: translateY(-50%);
+  max-width: 130px;
+}
+
 /* The little tail that points toward the mascot.
    Drawn as a CSS triangle (zero-size box with thick coloured borders).
    Tail height = 8px; we overlap the body by 1px (bottom: -7px) so there
@@ -191,5 +234,35 @@ html, body {
   bottom: -7px;
   left: 50%;
   transform: translateX(-50%);
+}
+
+/* right: tail on the bubble's left edge, pointing back toward the mascot.
+   Rotate the triangle so it points horizontally (right-facing border = the
+   point on the right side of a 0-size box, but here we want the point on
+   the LEFT — we use border-right as the colored side and place it at -7px
+   so it overlaps the body by 1px). */
+.bubble[data-anchor="right"] .bubble-tail {
+  top: 50%;
+  left: -7px;
+  right: auto;
+  bottom: auto;
+  transform: translateY(-50%);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-right: 8px solid #ffffff;
+  border-left: 0;
+}
+
+/* left: mirror of right. Tail on the bubble's right edge. */
+.bubble[data-anchor="left"] .bubble-tail {
+  top: 50%;
+  right: -7px;
+  left: auto;
+  bottom: auto;
+  transform: translateY(-50%);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid #ffffff;
+  border-right: 0;
 }
 

@@ -54,7 +54,7 @@
 | `renderer` | no | `"svg"` | One of `svg \| image \| lottie`. |
 | `viewBox` | svg only | — | Standard SVG viewBox string. |
 | `size` | recommended | `{200, 200}` | Mascot content area in pixels. |
-| `bubble.anchor` | no | `"top-right"` | One of `top-right \| top-left \| top`. |
+| `bubble.anchor` | no | `"top-right"` | One of `top-right \| top-left \| top \| right \| left`. |
 | `bubble.offsetX` / `offsetY` | no | `0` | Pixel offset for the speech bubble. |
 | `defaultState` | no | `"idle"` | Starting state when the renderer mounts. |
 | `fallbackState` | no | `"idle"` | Used by `image` / `lottie` renderers when a state's asset is missing. Ignored by `svg`. |

@@ -14,6 +14,7 @@
     error: 'エラー',
   };
 
+  const stage = document.getElementById('stage');
   const mascotWrap = document.getElementById('mascot-wrap');
   const bubble = document.getElementById('bubble');
   const bubbleText = document.getElementById('bubble-text');
@@ -43,6 +44,10 @@
   // the bubble text is overridden with the session name so the user can
   // identify stacked mascots. The is-idle dimming still tracks realState so
   // a hover doesn't visually mute a non-idle bubble.
+  // NOTE: visibility (the is-hidden class) is owned by bumpAutoHide /
+  // hideBubbleIfIdle / the hover handlers — updateBubble must not toggle it,
+  // otherwise every state/message refresh would briefly un-hide a bubble
+  // that's supposed to be invisible.
   function updateBubble(state, message) {
     const showSession = isHovered && sessionDisplayName;
     const label = showSession
@@ -50,7 +55,33 @@
       : (message && message.trim() ? message : (STATE_LABELS[state] || state));
     bubbleText.textContent = label;
     bubble.classList.toggle('is-idle', state === 'idle');
+  }
+
+  // Bubble auto-hide: by default the bubble is hidden. It pops in for ~6s
+  // each time state OR message changes, then fades back out. Hovering the
+  // mascot keeps it visible (and swaps to session displayName).
+  const BUBBLE_AUTO_HIDE_MS = 6000;
+  let autoHideTimer = null;
+  function clearAutoHide() {
+    if (autoHideTimer) {
+      clearTimeout(autoHideTimer);
+      autoHideTimer = null;
+    }
+  }
+  function showBubble() {
     bubble.classList.remove('is-hidden');
+  }
+  function hideBubbleIfIdle() {
+    if (isHovered) return;
+    bubble.classList.add('is-hidden');
+  }
+  function bumpAutoHide() {
+    showBubble();
+    clearAutoHide();
+    autoHideTimer = setTimeout(() => {
+      autoHideTimer = null;
+      hideBubbleIfIdle();
+    }, BUBBLE_AUTO_HIDE_MS);
   }
 
   // The pack's manifest-supplied anchor (default: 'top-right'). Stored so we
@@ -58,11 +89,16 @@
   let packBubbleAnchor = 'top-right';
   // User override from main.js. 'auto' means "use whatever the pack asked for".
   let userBubblePosition = 'auto';
-  const ALLOWED_BUBBLE_ANCHORS = ['top-right', 'top-left', 'top'];
+  const ALLOWED_BUBBLE_ANCHORS = ['top-right', 'top-left', 'top', 'right', 'left'];
 
   function applyBubbleAnchor() {
     const candidate = userBubblePosition !== 'auto' ? userBubblePosition : packBubbleAnchor;
-    bubble.dataset.anchor = ALLOWED_BUBBLE_ANCHORS.includes(candidate) ? candidate : 'top-right';
+    const final = ALLOWED_BUBBLE_ANCHORS.includes(candidate) ? candidate : 'top-right';
+    bubble.dataset.anchor = final;
+    // Mirror the anchor onto the stage so the mascot can be biased to one
+    // side when the bubble is sideways (right/left). Top-anchored bubbles
+    // leave the stage's default centered layout untouched.
+    if (stage) stage.dataset.bubbleAnchor = final;
   }
 
   function setPackBubbleAnchor(anchor) {
@@ -82,10 +118,19 @@
   // shows the overlay instead, but realState keeps progressing (including
   // the done -> idle auto-reset timer) so the moment the overlay clears we
   // snap to whatever realState has become.
-  function setState(state, message) {
+  //
+  // opts.silent (default: false) suppresses the auto-show bubble bump. Used
+  // by the internal done -> idle timer so a finished session quietly fades
+  // its bubble out without re-popping it 2.5s later.
+  function setState(state, message, opts) {
     if (!VALID_STATES.includes(state)) return;
+    const newMessage = typeof message === 'string' ? message : '';
+    // Compute change flags BEFORE mutating, so bumpAutoHide can be conditional
+    // on actual change (avoids a noisy "every POST resurrects the bubble").
+    const stateChanged = state !== realState;
+    const messageChanged = newMessage !== currentMessage;
     realState = state;
-    currentMessage = typeof message === 'string' ? message : '';
+    currentMessage = newMessage;
 
     if (doneResetTimer) {
       clearTimeout(doneResetTimer);
@@ -93,14 +138,19 @@
     }
     // done -> idle auto-reset operates on realState. We don't suspend it
     // during a drag — by the time the drag ends, realState may already be
-    // back to 'idle' and that's fine.
+    // back to 'idle' and that's fine. The reset is silent: the bubble
+    // shouldn't pop back up just because 2.5s passed.
     if (state === 'done') {
       doneResetTimer = setTimeout(() => {
-        setState('idle', '');
+        setState('idle', '', { silent: true });
       }, 2500);
     }
 
     applyEffectiveState();
+
+    if (!opts?.silent && (stateChanged || messageChanged)) {
+      bumpAutoHide();
+    }
   }
 
   // Apply realState OR the active overlay (dragging / falling / landed),
@@ -216,17 +266,30 @@
     if (isHovered) updateBubble(realState, currentMessage);
   }
 
-  // Hover swap: only flip the bubble when we actually have a name to show
-  // (otherwise leave the state text alone). Re-render via updateBubble so
-  // the is-idle class and message handling stay in one place.
-  mascotWrap.addEventListener('mouseenter', () => {
+  // Hover swap: only flip the bubble text when we actually have a name to
+  // show (otherwise leave the state text alone). Hover ALSO holds the bubble
+  // visible — it cancels any pending auto-hide and shows the bubble even if
+  // it was hidden a moment ago. On leave we don't immediately hide; if a
+  // bump timer is in flight we let it expire naturally, otherwise we hide.
+  //
+  // Listener lives on `stage` (the whole window) rather than `mascotWrap`
+  // because `-webkit-app-region: drag` on mascotWrap routes mouse events to
+  // the OS for window dragging, which makes mouseenter/mouseleave on the
+  // mascot's body unreliable. The stage element fills the whole window and
+  // is not a drag region itself, so hover fires consistently anywhere over
+  // the mascot — including the bubble area that overflows mascot-wrap.
+  const hoverTarget = stage || mascotWrap;
+  hoverTarget.addEventListener('mouseenter', () => {
     isHovered = true;
+    clearAutoHide();
+    showBubble();
     if (sessionDisplayName) updateBubble(realState, currentMessage);
   });
-  mascotWrap.addEventListener('mouseleave', () => {
+  hoverTarget.addEventListener('mouseleave', () => {
     if (!isHovered) return;
     isHovered = false;
     updateBubble(realState, currentMessage);
+    if (!autoHideTimer) hideBubbleIfIdle();
   });
 
   // ---- Wire IPC ----
@@ -281,7 +344,12 @@
     });
   }
 
-  // Boot: load the initial pack, then announce ready so main can replay state.
+  // Boot: hide the bubble by default. The first setState('idle','') below
+  // is a no-op for change tracking (state and message both equal their
+  // initial values) so it does NOT bump the auto-hide — the bubble stays
+  // invisible until a real state change or message arrives.
+  bubble.classList.add('is-hidden');
+
   loadInitialPack().then(() => {
     setState('idle', '');
     if (window.api && typeof window.api.rendererReady === 'function') {

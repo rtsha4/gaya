@@ -68,7 +68,7 @@ const VALID_MOVEMENT_STYLE = new Set(['random', 'pacing']);
 // (the historical behavior). Any other value overrides the pack-supplied anchor
 // for every session window. Kept in sync with the allow-list used by the
 // renderer (renderer/renderer.js setBubbleAnchor).
-const VALID_BUBBLE_POSITION = new Set(['auto', 'top-right', 'top-left', 'top']);
+const VALID_BUBBLE_POSITION = new Set(['auto', 'top-right', 'top-left', 'top', 'right', 'left']);
 let movementWhen = 'idle';
 let movementStyle = 'random';
 let bubblePosition = 'auto';
@@ -157,13 +157,15 @@ const RW_PAUSE_MAX_MS = 3000;
 const RW_TURN_MIN_MS = 1500;
 const RW_TURN_MAX_MS = 4000;
 
-// Width/height for new mascot windows (legacy default).
-const WIN_WIDTH = 280;
-const WIN_HEIGHT = 240;
+// Width/height for new mascot windows. Sized to give the speech bubble room
+// to extend horizontally (right/left anchors) and vertically (multi-line
+// wrapped text) without being clipped by the window.
+const WIN_WIDTH = 360;
+const WIN_HEIGHT = 280;
 // Per-session horizontal offset so multiple mascots don't stack on top of each
-// other. Empirical value: each is 280px wide, 220px stride keeps a small
-// overlap (helpful on narrow displays) while still distinguishing them.
-const SESSION_X_STRIDE = 220;
+// other. Each window is 360px wide, 280px stride keeps a small overlap
+// (helpful on narrow displays) while still distinguishing them.
+const SESSION_X_STRIDE = 280;
 const WIN_MARGIN = 24;
 
 // Single global movement timer / drag/visibility state shared across sessions.
@@ -1048,8 +1050,10 @@ function rebuildTrayMenu() {
   const bubblePositionSubmenu = [
     { label: 'Auto (pack default)', type: 'radio', checked: bubblePosition === 'auto', click: () => setBubblePosition('auto') },
     { label: 'Top right', type: 'radio', checked: bubblePosition === 'top-right', click: () => setBubblePosition('top-right') },
-    { label: 'Top left', type: 'radio', checked: bubblePosition === 'top-left', click: () => setBubblePosition('top-left') },
     { label: 'Top', type: 'radio', checked: bubblePosition === 'top', click: () => setBubblePosition('top') },
+    { label: 'Top left', type: 'radio', checked: bubblePosition === 'top-left', click: () => setBubblePosition('top-left') },
+    { label: 'Right', type: 'radio', checked: bubblePosition === 'right', click: () => setBubblePosition('right') },
+    { label: 'Left', type: 'radio', checked: bubblePosition === 'left', click: () => setBubblePosition('left') },
   ];
 
   // Sessions submenu: list all active sessions as info-only items, newest first.
@@ -1640,7 +1644,7 @@ async function validatePackDir(dir, expectedIdOrNull) {
     result.errors.push(`unknown renderer '${rendererType}'`);
   }
   if (manifest.bubble && typeof manifest.bubble === 'object') {
-    const allowed = ['top-right', 'top-left', 'top'];
+    const allowed = ['top-right', 'top-left', 'top', 'right', 'left'];
     if (manifest.bubble.anchor && !allowed.includes(manifest.bubble.anchor)) {
       result.warnings.push(`bubble.anchor '${manifest.bubble.anchor}' is not one of ${allowed.join('/')}`);
     }
