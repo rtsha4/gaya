@@ -52,6 +52,10 @@ The Tray title shows an emoji that reflects the **aggregate** state across all s
 - `session_end` triggers a 2.5 s farewell animation and then destroys the window.
 - `session-info` IPC carries `{sessionId, displayName, cwd}` to the renderer. The renderer does **not** show a permanent session label; instead, while the mouse hovers the mascot, the speech-bubble text is temporarily replaced with the truncated `displayName`. When `displayName` is empty the hover swap is suppressed and the bubble keeps showing state text.
 
+Each session carries its own `packId` and can show a different character. The initial `packId` for a new session is resolved in this order: (1) if the session was created with a known `cwd` and `cwdPackMap[cwd]` points at a registered pack, use it; (2) otherwise use `activePackId` — the Tray's *Default Character (new sessions)* radio choice. Switching `activePackId` from Tray therefore only affects future sessions; existing windows keep whatever pack they already have.
+
+The user changes a single session's pack via Tray → **Sessions** → *<session>* → **Character**. That call goes through `switchSessionPack`, which records `cwdPackMap[session.cwd] = packId` (when the session has a cwd) and persists `settings.json`. It also sets `session.packIdLocked = true`, so a later cwd-derived auto-switch in `ensureSession` won't override the user's deliberate choice. When a session is created without a cwd and the cwd later arrives on a subsequent POST, `ensureSession` consults `cwdPackMap` and — only when `packIdLocked` is still `false` — issues a one-time `switch-pack` to bring the session to the remembered pack.
+
 ## Window layout
 
 - Per-session window: 360×280 px, transparent, panel-type on macOS (always-on-top across Spaces, screen-saver level).
@@ -68,7 +72,7 @@ All channels live on `preload.js` and are fanned out from `main.js`. Channel nam
 | Channel | Payload | Notes |
 |---|---|---|
 | `state` | `{state, message}` | Base state update. |
-| `switch-pack` | `packId` | Sent to all mascot windows on Tray pack change. |
+| `switch-pack` | `packId` | Sent to a single session window when its `packId` changes (per-session pack switch via Tray, or a cwd-derived auto-switch when the cwd first arrives, or to align the renderer with the session's stored `packId` on `renderer-ready`). The Tray's *Default Character* radio no longer broadcasts. |
 | `movement` | `{walking, direction}` | `direction` is `'left'` or `'right'`. |
 | `overlay` | `{overlay}` | `overlay` is one of `'dragging' \| 'falling' \| 'landed' \| null`. |
 | `session-info` | `{sessionId, displayName, cwd}` | Sent once after `renderer-ready`. |
@@ -117,8 +121,9 @@ Persisted keys:
 - `bubblePosition` (`auto | top-right | top-left | top | right | left`; `auto` defers to the active pack's `manifest.bubble.anchor`, anything else overrides every session window)
 - `clickThrough` (boolean)
 - `externalPackPaths` (array of absolute folder paths registered via Tray → "Add Pack from Folder…"; missing paths at startup are logged and skipped silently, but kept in the file so the registration survives a temporarily-unavailable disk)
+- `cwdPackMap` (`{ [absoluteCwd: string]: packId }`; populated by Tray → Sessions → *<session>* → Character. Lets a project re-open with the same pack on the next run. Entries pointing at a now-removed pack are cleaned up by `removeExternalPack`.)
 
-Pack selection is **not** persisted — startup always uses the hardcoded `PREFERRED_DEFAULTS` order in `main.js` (currently prefers `grave-ghost`, then `pop`, then `classic`, then the first discovered pack).
+The Tray's *Default Character (new sessions)* radio (`activePackId`) is **not** persisted — startup always uses the hardcoded `PREFERRED_DEFAULTS` order in `main.js` (currently prefers `grave-ghost`, then `pop`, then `classic`, then the first discovered pack). Per-session pack assignments **are** persisted, but indirectly: the choice is keyed by cwd in `cwdPackMap` and re-applied to a future session that opens with the same cwd.
 
 ## Hooks integration
 

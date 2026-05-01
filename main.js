@@ -58,6 +58,11 @@ let activePackId = null;
 // Absolute paths for externally registered packs. Persisted in settings.json
 // under `externalPackPaths` so they survive restarts.
 let externalPackPaths = [];
+// Per-cwd persisted pack assignments. Key: absolute cwd. Value: pack id.
+// Populated whenever the user explicitly switches a session's pack via Tray
+// (see `switchSessionPack`). New sessions whose cwd is in the map start with
+// the recorded pack id instead of `activePackId`.
+let cwdPackMap = {};
 
 // ---- Persistent settings ----
 // Stored under app.getPath('userData')/settings.json. Only specific keys are
@@ -104,6 +109,16 @@ function loadSettings() {
         }
         externalPackPaths = out;
       }
+      if (parsed.cwdPackMap && typeof parsed.cwdPackMap === 'object' && !Array.isArray(parsed.cwdPackMap)) {
+        const out = {};
+        for (const [k, v] of Object.entries(parsed.cwdPackMap)) {
+          if (typeof k !== 'string' || typeof v !== 'string') continue;
+          if (!k) continue;
+          if (!PACK_ID_RE.test(v)) continue;
+          out[k] = v;
+        }
+        cwdPackMap = out;
+      }
     }
   } catch (err) {
     if (err && err.code !== 'ENOENT') {
@@ -120,6 +135,7 @@ function saveSettings() {
     bubblePosition,
     clickThrough,
     externalPackPaths,
+    cwdPackMap,
   };
   try {
     fs.mkdirSync(path.dirname(getSettingsPath()), { recursive: true });
@@ -207,6 +223,15 @@ let mascotsHiddenByUser = false;
 //                                  // helpers below). Replaces the previous isDragging flag.
 //   dragEndTimer: NodeJS.Timeout | null,  // debounce timer that fires DRAG_END_DEBOUNCE_MS after the last user-driven move
 //   landedTimer: NodeJS.Timeout | null,  // clears the 'landed' overlay after LANDED_DURATION_MS
+//   packId: string,                // active pack id for THIS session window. Initialised
+//                                  // from cwdPackMap[cwd] if known, else from activePackId
+//                                  // (Tray's "Default Character" choice). Sent to the
+//                                  // renderer via the existing 'switch-pack' IPC.
+//   packIdLocked: boolean,         // true once the user has explicitly chosen a pack for
+//                                  // this session via Tray. While false, a late-arriving
+//                                  // cwd may still trigger an automatic switch from
+//                                  // cwdPackMap. Once true, cwd-derived auto-switching is
+//                                  // suppressed for the lifetime of the session.
 // }
 const sessions = new Map();
 let sessionReapTimer = null;
@@ -408,6 +433,21 @@ function ensureSession(sessionId, cwd) {
       s.displayName = deriveDisplayName(sessionId, cwd);
       // Resend session-info so the renderer label updates.
       sendSessionInfo(s);
+      // The session was created without a cwd, so its packId came from
+      // `activePackId`. Now that we know the cwd, consult cwdPackMap and
+      // switch the pack if it differs — but only when the user has not
+      // explicitly chosen one via Tray (packIdLocked).
+      if (!s.packIdLocked) {
+        const mapped = cwdPackMap[cwd];
+        if (mapped && availablePacks.find((p) => p.id === mapped) && mapped !== s.packId) {
+          s.packId = mapped;
+          const win = s.window;
+          if (win && !win.isDestroyed()) {
+            win.webContents.send('switch-pack', mapped);
+          }
+          rebuildTrayMenu();
+        }
+      }
     }
     s.lastActivity = Date.now();
     return s;
@@ -425,6 +465,13 @@ function ensureSession(sessionId, cwd) {
 }
 
 function createSession(sessionId, cwd) {
+  // Resolve the initial pack id: if we already know the cwd and have a
+  // remembered pack for it (and that pack is currently registered), use that;
+  // otherwise fall back to the Tray-level default (`activePackId`).
+  let packId = activePackId;
+  if (cwd && cwdPackMap[cwd] && availablePacks.find((p) => p.id === cwdPackMap[cwd])) {
+    packId = cwdPackMap[cwd];
+  }
   const session = {
     id: sessionId,
     cwd: cwd || '',
@@ -451,6 +498,8 @@ function createSession(sessionId, cwd) {
     overlay: null,
     dragEndTimer: null,
     landedTimer: null,
+    packId,
+    packIdLocked: false,
   };
   createSessionWindow(session);
   return session;
@@ -1006,13 +1055,33 @@ function updateTrayForAggregate() {
   tray.setToolTip(tip);
 }
 
+// Tray 直下の "Default Character" を変更する。
+// 新規セッションの既定 pack を切り替えるだけで、既存セッションには影響しない。
+// （以前は全セッション一括切替だったが、per-session pack 機能の導入に伴い破壊的変更として整理。）
 function switchPack(id) {
   if (!availablePacks.find((p) => p.id === id)) return;
   activePackId = id;
-  for (const s of sessions.values()) {
-    const win = s.window;
-    if (!win || win.isDestroyed()) continue;
-    win.webContents.send('switch-pack', id);
+  rebuildTrayMenu();
+}
+
+// User explicitly chose a pack for one specific session via the Tray
+// "Sessions → <name> → Character" submenu. Persist the choice keyed by cwd
+// so the same project gets the same pack on the next run, and lock the
+// session so a late-arriving cwd auto-switch (see ensureSession) won't
+// override the user's choice.
+function switchSessionPack(sessionId, packId) {
+  const s = sessions.get(sessionId);
+  if (!s) return;
+  if (!availablePacks.find((p) => p.id === packId)) return;
+  s.packId = packId;
+  s.packIdLocked = true;
+  if (s.cwd) {
+    cwdPackMap[s.cwd] = packId;
+    saveSettings();
+  }
+  const win = s.window;
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('switch-pack', packId);
   }
   rebuildTrayMenu();
 }
@@ -1056,13 +1125,29 @@ function rebuildTrayMenu() {
     { label: 'Left', type: 'radio', checked: bubblePosition === 'left', click: () => setBubblePosition('left') },
   ];
 
-  // Sessions submenu: list all active sessions as info-only items, newest first.
+  // Sessions submenu: list all active sessions, newest first. Each session
+  // is itself a submenu with a per-session Character picker. Choosing a pack
+  // there only affects that one session and persists by cwd via switchSessionPack.
   const sessionEntries = [];
-  const activeSessions = [...sessions.values()].filter((s) => !s.endLingerTimer);
-  activeSessions.sort((a, b) => b.lastActivity - a.lastActivity);
-  for (const s of activeSessions) {
+  const sortedSessions = [...sessions.values()]
+    .filter((s) => !s.endLingerTimer)
+    .sort((a, b) => b.lastActivity - a.lastActivity);
+  for (const s of sortedSessions) {
     const name = s.displayName || s.id.slice(0, 8);
-    sessionEntries.push({ label: `${name} · ${s.state}`, enabled: false });
+    const perSessionCharacterSubmenu = availablePacks.length
+      ? availablePacks.map((p) => ({
+          label: p.name,
+          type: 'radio',
+          checked: p.id === s.packId,
+          click: () => switchSessionPack(s.id, p.id),
+        }))
+      : [{ label: '(no packs found)', enabled: false }];
+    sessionEntries.push({
+      label: `${name} · ${s.state}`,
+      submenu: [
+        { label: 'Character', submenu: perSessionCharacterSubmenu },
+      ],
+    });
   }
   if (!sessionEntries.length) sessionEntries.push({ label: '(no sessions)', enabled: false });
 
@@ -1082,7 +1167,7 @@ function rebuildTrayMenu() {
     { type: 'separator' },
     { label: `gaya (port ${boundPort ?? '—'})`, enabled: false },
     { type: 'separator' },
-    { label: 'Character', submenu: characterSubmenu },
+    { label: 'Default Character (new sessions)', submenu: characterSubmenu },
     { label: 'Add Pack from Folder…', click: () => addExternalPackFlow() },
     {
       label: 'Remove External Pack',
@@ -1192,6 +1277,16 @@ function removeExternalPack(id) {
   const target = availablePacks.find((p) => p.id === id && p.external);
   if (!target) return;
   externalPackPaths = externalPackPaths.filter((p) => p !== target.dir);
+  // Drop any cwdPackMap entries that point at the removed pack, so we don't
+  // try to auto-apply a now-unknown pack id to a future session with the
+  // same cwd. saveSettings is called once below regardless.
+  let cwdMapDirty = false;
+  for (const [k, v] of Object.entries(cwdPackMap)) {
+    if (v === id) {
+      delete cwdPackMap[k];
+      cwdMapDirty = true;
+    }
+  }
   saveSettings();
   availablePacks = discoverPacks();
   if (activePackId === id) {
@@ -1202,6 +1297,8 @@ function removeExternalPack(id) {
     }
     activePackId = null;
   }
+  // cwdMapDirty is informational; saveSettings above already persisted.
+  void cwdMapDirty;
   rebuildTrayMenu();
 }
 
@@ -1380,6 +1477,13 @@ ipcMain.on('renderer-ready', (event) => {
   // Push the current global bubble-position override so the renderer can
   // pick it over the pack's manifest anchor on first paint.
   sendBubblePosition(session);
+  // If this session's pack differs from the renderer's startup default
+  // (loadInitialPack picks a default via pack:list/PREFERRED_DEFAULTS), tell
+  // the renderer to switch. The renderer's switchPack collapses no-ops so
+  // matching ids cost nothing.
+  if (session.packId) {
+    event.sender.send('switch-pack', session.packId);
+  }
   // Then send (or replay) the current state.
   sendStateToSession(session);
 });
