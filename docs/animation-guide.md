@@ -376,7 +376,7 @@ styles.css で以下のレイアウトが固定されており、パックは **
 | 要素 | 位置（`.mascot-wrap` 200×200 を基準） |
 |---|---|
 | 吹き出し | `top-right`（既定） / `top-left` / `top` のいずれか。manifest の `bubble.anchor` で指定 |
-| セッションラベル（cwd basename） | マスコット直下（`bottom: -16px`）。`__default__` 以外で表示される |
+| セッションラベル（cwd basename） | マスコット直下（`bottom: -16px`）。`displayName` が空でないときに表示される |
 | マスコット本体 | `viewBox` の中央付近に配置するのが無難 |
 
 ガイドライン：
@@ -470,7 +470,7 @@ done
 
 ### DevTools
 
-Tray メニュー → `Toggle DevTools` で renderer 側のコンソールを開けます。`console.warn` / `console.error` の出力や、CSS の効き具合のデバッグに使えます（DevTools が開くのは `__default__` セッションのウィンドウ）。
+Tray メニュー → `Toggle DevTools` で renderer 側のコンソールを開けます。`console.warn` / `console.error` の出力や、CSS の効き具合のデバッグに使えます（DevTools は最初に見つかったアクティブセッションのウィンドウで開きます。セッションが 1 つも無い場合は何も起こりません）。
 
 ### パック切替
 

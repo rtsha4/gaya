@@ -193,35 +193,3 @@ html, body {
   transform: translateX(-50%);
 }
 
-/* ========================================================================
-   Per-session label — pack-independent.
-   Anchored to the bottom-center of .mascot-wrap so the displayName sits
-   directly below the mascot regardless of pack. Hidden for the
-   __default__ session (the renderer toggles the [hidden] attribute).
-   ======================================================================== */
-.session-label {
-  position: absolute;
-  bottom: -16px;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 180px;
-  padding: 2px 8px;
-  background: rgba(255, 255, 255, 0.85);
-  color: #444;
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1.3;
-  border-radius: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.18));
-  pointer-events: none;
-  -webkit-app-region: no-drag;
-  /* Make sure the label paints above the mascot but below any bubble that
-     happens to overlap. */
-  z-index: 2;
-}
-.session-label[hidden] {
-  display: none;
-}

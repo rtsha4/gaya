@@ -124,6 +124,8 @@ Overlay state takes visual precedence; the underlying base-state class is replac
 
 The speech bubble is rendered by the host (not the pack). `bubble.anchor` and `bubble.offsetX/Y` in the manifest position it relative to the mascot box. Bubble text is supplied by the HTTP `message` field, or the built-in Japanese label table when `message` is absent.
 
+The user can override `bubble.anchor` globally via Tray → Bubble Position (persisted in `settings.json` as `bubblePosition`). When set to anything other than `auto`, the user choice wins and the manifest's `bubble.anchor` is ignored.
+
 ## Scaffolding
 
 Use the `pack-template` skill (`.claude/skills/pack-template/`) to generate a new pack directory for the chosen renderer. It produces a working `manifest.json`, a renderer-appropriate skeleton, and a `pack.css` that already follows the scoping rules above.

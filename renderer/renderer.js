@@ -17,9 +17,11 @@
   const mascotWrap = document.getElementById('mascot-wrap');
   const bubble = document.getElementById('bubble');
   const bubbleText = document.getElementById('bubble-text');
-  // Per-session label: visible on every non-default session so the user can
-  // tell stacked mascots apart. Set by the session-info IPC.
-  const sessionLabel = document.getElementById('session-label');
+  // Session displayName: shown inside the bubble while the mouse hovers the
+  // mascot, so stacked mascots can be told apart without a permanent label.
+  // Empty string (default / nameless sessions) means hover does nothing.
+  let sessionDisplayName = '';
+  let isHovered = false;
   const SESSION_LABEL_MAX = 16;
 
   let currentPackId = null;
@@ -37,16 +39,42 @@
   let doneResetTimer = null;
 
   // Bubble + state plumbing (renderer-agnostic).
+  // While the mascot is hovered AND we have a displayName for this session,
+  // the bubble text is overridden with the session name so the user can
+  // identify stacked mascots. The is-idle dimming still tracks realState so
+  // a hover doesn't visually mute a non-idle bubble.
   function updateBubble(state, message) {
-    const label = message && message.trim() ? message : (STATE_LABELS[state] || state);
+    const showSession = isHovered && sessionDisplayName;
+    const label = showSession
+      ? sessionDisplayName
+      : (message && message.trim() ? message : (STATE_LABELS[state] || state));
     bubbleText.textContent = label;
     bubble.classList.toggle('is-idle', state === 'idle');
     bubble.classList.remove('is-hidden');
   }
 
-  function setBubbleAnchor(anchor) {
-    const allowed = ['top-right', 'top-left', 'top'];
-    bubble.dataset.anchor = allowed.includes(anchor) ? anchor : 'top-right';
+  // The pack's manifest-supplied anchor (default: 'top-right'). Stored so we
+  // can fall back to it when the user-level override is 'auto'.
+  let packBubbleAnchor = 'top-right';
+  // User override from main.js. 'auto' means "use whatever the pack asked for".
+  let userBubblePosition = 'auto';
+  const ALLOWED_BUBBLE_ANCHORS = ['top-right', 'top-left', 'top'];
+
+  function applyBubbleAnchor() {
+    const candidate = userBubblePosition !== 'auto' ? userBubblePosition : packBubbleAnchor;
+    bubble.dataset.anchor = ALLOWED_BUBBLE_ANCHORS.includes(candidate) ? candidate : 'top-right';
+  }
+
+  function setPackBubbleAnchor(anchor) {
+    packBubbleAnchor = ALLOWED_BUBBLE_ANCHORS.includes(anchor) ? anchor : 'top-right';
+    applyBubbleAnchor();
+  }
+
+  function setUserBubblePosition(position) {
+    userBubblePosition = position === 'auto' || ALLOWED_BUBBLE_ANCHORS.includes(position)
+      ? position
+      : 'auto';
+    applyBubbleAnchor();
   }
 
   // setState updates the realState (state from main.js) and re-evaluates
@@ -126,7 +154,7 @@
     activeRenderer = inst;
 
     const anchor = (manifest.bubble && manifest.bubble.anchor) || 'top-right';
-    setBubbleAnchor(anchor);
+    setPackBubbleAnchor(anchor);
 
     currentPackId = manifest.id;
     // Re-apply the effective state (realState or dragging overlay) on the
@@ -169,28 +197,37 @@
     }
   }
 
-  // Per-session label. Truncate long names (e.g. very long folder names) to
-  // keep the label visually compact — full path lives in cwd if needed.
+  // Cache the session's displayName for the hover-to-reveal swap. Truncate
+  // long names so they don't overflow the bubble; full cwd remains in main.
+  // If the name is empty (no cwd, no usable id prefix) we leave
+  // sessionDisplayName empty so hovering doesn't replace the state text with
+  // anything misleading.
   function applySessionInfo(payload) {
-    if (!sessionLabel) return;
     const name = payload && typeof payload.displayName === 'string' ? payload.displayName : '';
-    const isDefault = !!(payload && payload.isDefault);
-    if (!name || isDefault || name === '__default__') {
-      sessionLabel.textContent = '';
-      sessionLabel.setAttribute('hidden', '');
-      return;
-    }
-    const trimmed = name.length > SESSION_LABEL_MAX
-      ? name.slice(0, SESSION_LABEL_MAX - 1) + '…'
-      : name;
-    sessionLabel.textContent = trimmed;
-    if (payload && typeof payload.cwd === 'string' && payload.cwd) {
-      sessionLabel.setAttribute('title', payload.cwd);
+    if (!name) {
+      sessionDisplayName = '';
     } else {
-      sessionLabel.removeAttribute('title');
+      sessionDisplayName = name.length > SESSION_LABEL_MAX
+        ? name.slice(0, SESSION_LABEL_MAX - 1) + '…'
+        : name;
     }
-    sessionLabel.removeAttribute('hidden');
+    // If the user is hovering right now, refresh the bubble immediately so
+    // the swapped text reflects the latest session info.
+    if (isHovered) updateBubble(realState, currentMessage);
   }
+
+  // Hover swap: only flip the bubble when we actually have a name to show
+  // (otherwise leave the state text alone). Re-render via updateBubble so
+  // the is-idle class and message handling stay in one place.
+  mascotWrap.addEventListener('mouseenter', () => {
+    isHovered = true;
+    if (sessionDisplayName) updateBubble(realState, currentMessage);
+  });
+  mascotWrap.addEventListener('mouseleave', () => {
+    if (!isHovered) return;
+    isHovered = false;
+    updateBubble(realState, currentMessage);
+  });
 
   // ---- Wire IPC ----
   if (window.api && typeof window.api.onState === 'function') {
@@ -218,7 +255,7 @@
   }
   // Per-window identity. Sent once after main receives renderer-ready, and
   // re-sent if cwd is updated later (e.g. when a hook supplies it after the
-  // first state POST). Hide the label entirely for __default__.
+  // first state POST).
   if (window.api && typeof window.api.onSessionInfo === 'function') {
     window.api.onSessionInfo((payload) => {
       if (!payload || typeof payload !== 'object') return;
@@ -233,6 +270,14 @@
     window.api.onOverlay((payload) => {
       if (!payload || typeof payload !== 'object') return;
       setOverlay(payload.overlay == null ? null : payload.overlay);
+    });
+  }
+  // Global bubble-position override pushed from main (Tray → Bubble Position).
+  // payload.position is one of 'auto' | 'top-right' | 'top-left' | 'top'.
+  if (window.api && typeof window.api.onBubblePosition === 'function') {
+    window.api.onBubblePosition((payload) => {
+      if (!payload || typeof payload !== 'object') return;
+      setUserBubblePosition(payload.position);
     });
   }
 

@@ -12,8 +12,11 @@ contextBridge.exposeInMainWorld('api', {
   // dragging -> falling -> landed -> null sequence around user drags.
   onOverlay: (cb) => ipcRenderer.on('overlay', (_event, payload) => cb(payload)),
   // Per-window identity. Sent once after renderer-ready: payload
-  // { sessionId, isDefault, displayName, cwd }.
+  // { sessionId, displayName, cwd }.
   onSessionInfo: (cb) => ipcRenderer.on('session-info', (_event, payload) => cb(payload)),
+  // Global bubble-position override. payload { position: 'auto'|'top-right'|'top-left'|'top' }.
+  // 'auto' means: defer to the active pack's manifest.bubble.anchor.
+  onBubblePosition: (cb) => ipcRenderer.on('bubble-position', (_event, payload) => cb(payload)),
   rendererReady: () => ipcRenderer.send('renderer-ready'),
   // Pack assets are read by main (fs) and shipped over IPC because fetch()
   // under sandbox:true on file:// is blocked.

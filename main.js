@@ -3,8 +3,8 @@
 //
 // Multi-session: a single Electron app hosts one mascot window per active
 // Claude Code session. The HTTP server multiplexes POST /state by session_id
-// and routes each update to the right window. A built-in `__default__`
-// session always exists so older curl tests (no session_id) keep working.
+// and routes each update to the right window. `session_id` is required on
+// every POST; mascot windows are created lazily on first hook arrival.
 
 const { app, BrowserWindow, Tray, Menu, ipcMain, screen, nativeImage, shell, dialog } = require('electron');
 const path = require('node:path');
@@ -36,10 +36,8 @@ const CHARACTERS_DIR = path.join(__dirname, 'assets', 'characters');
 // then anything else.
 const PREFERRED_DEFAULTS = ['grave-ghost', 'pop', 'classic'];
 
-// Sentinel session id used when a POST has no session_id. Always exists.
-const DEFAULT_SESSION_ID = '__default__';
-// Hard cap on concurrent session windows (the __default__ session does not
-// count against eviction, but does count against this number for layout).
+// Hard cap on concurrent session windows. Sessions beyond this are evicted
+// oldest-first by lastActivity.
 const MAX_SESSIONS = 6;
 // Auto-evict idle sessions after this many ms with no POST activity.
 const SESSION_IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
@@ -66,8 +64,14 @@ let externalPackPaths = [];
 // persisted; pack selection is intentionally NOT persisted (existing behavior).
 const VALID_MOVEMENT_WHEN = new Set(['always', 'idle', 'off']);
 const VALID_MOVEMENT_STYLE = new Set(['random', 'pacing']);
+// Bubble position: 'auto' defers to the active pack's manifest.bubble.anchor
+// (the historical behavior). Any other value overrides the pack-supplied anchor
+// for every session window. Kept in sync with the allow-list used by the
+// renderer (renderer/renderer.js setBubbleAnchor).
+const VALID_BUBBLE_POSITION = new Set(['auto', 'top-right', 'top-left', 'top']);
 let movementWhen = 'idle';
 let movementStyle = 'random';
+let bubblePosition = 'auto';
 let settingsPath = null;
 
 function getSettingsPath() {
@@ -84,6 +88,7 @@ function loadSettings() {
     if (parsed && typeof parsed === 'object') {
       if (VALID_MOVEMENT_WHEN.has(parsed.movementWhen)) movementWhen = parsed.movementWhen;
       if (VALID_MOVEMENT_STYLE.has(parsed.movementStyle)) movementStyle = parsed.movementStyle;
+      if (VALID_BUBBLE_POSITION.has(parsed.bubblePosition)) bubblePosition = parsed.bubblePosition;
       if (typeof parsed.clickThrough === 'boolean') clickThrough = parsed.clickThrough;
       if (Array.isArray(parsed.externalPackPaths)) {
         const seen = new Set();
@@ -112,6 +117,7 @@ function saveSettings() {
   const payload = {
     movementWhen,
     movementStyle,
+    bubblePosition,
     clickThrough,
     externalPackPaths,
   };
@@ -167,12 +173,11 @@ let lastTickAt = 0;
 // per-window isVisible() (which can also be false during a fade-out, etc.).
 let mascotsHiddenByUser = false;
 
-// All active sessions, keyed by session_id. Always contains DEFAULT_SESSION_ID.
+// All active sessions, keyed by session_id. Empty until the first POST.
 //
 // SessionData shape:
 // {
 //   id: string,
-//   isDefault: boolean,           // __default__ never evicted, no label
 //   cwd: string,
 //   displayName: string,          // basename(cwd) or short id
 //   state: string,
@@ -297,7 +302,6 @@ function deriveDisplayName(sessionId, cwd) {
     const base = path.basename(cwd);
     if (base) return base;
   }
-  if (sessionId === DEFAULT_SESSION_ID) return '';
   // Short prefix of session id (8 chars) keeps the label compact when cwd
   // is unavailable.
   return sessionId.slice(0, 8);
@@ -305,24 +309,16 @@ function deriveDisplayName(sessionId, cwd) {
 
 // ---- Layout / per-session window creation ----
 
-// Compute initial position for a brand-new session window. We lay the
-// non-default sessions out from right to left, with __default__ pinned at
-// slot 0 (right-most). On wrap, drop a row up.
-function computeInitialPositionForSession(sessionList, isDefault) {
+// Compute initial position for a brand-new session window. Sessions are laid
+// out from the right edge in arrival order; on wrap, drop a row up.
+function computeInitialPositionForSession(sessionList) {
   const { workArea } = screen.getPrimaryDisplay();
-  // Slot 0 is reserved for __default__ at far right.
-  // Other sessions occupy slot 1, 2, ... in arrival order.
-  let slot;
-  if (isDefault) {
-    slot = 0;
-  } else {
-    // Count existing non-default sessions; assign next slot.
-    let count = 0;
-    for (const s of sessionList.values()) {
-      if (!s.isDefault && !s.endLingerTimer) count += 1;
-    }
-    slot = count + 1; // +1 so __default__ keeps slot 0
+  // Count existing (non-lingering) sessions to pick the next slot.
+  let count = 0;
+  for (const s of sessionList.values()) {
+    if (!s.endLingerTimer) count += 1;
   }
+  const slot = count;
   // How many slots fit horizontally? Wrap once we run out of room.
   const usable = workArea.width - WIN_MARGIN * 2;
   const perRow = Math.max(1, Math.floor(usable / SESSION_X_STRIDE));
@@ -335,7 +331,7 @@ function computeInitialPositionForSession(sessionList, isDefault) {
 }
 
 function createSessionWindow(session) {
-  const { x, y } = computeInitialPositionForSession(sessions, session.isDefault);
+  const { x, y } = computeInitialPositionForSession(sessions);
   session.posX = x;
   session.posY = y;
   const win = new BrowserWindow({
@@ -414,8 +410,8 @@ function ensureSession(sessionId, cwd) {
     s.lastActivity = Date.now();
     return s;
   }
-  // Capacity check: evict the oldest non-default session if we'd exceed cap.
-  // We count active (non-lingering) sessions toward the cap.
+  // Capacity check: evict the oldest session if we'd exceed cap. We count
+  // active (non-lingering) sessions toward the cap.
   const activeCount = countActiveSessions();
   if (activeCount >= MAX_SESSIONS) {
     evictOldestSession();
@@ -427,10 +423,8 @@ function ensureSession(sessionId, cwd) {
 }
 
 function createSession(sessionId, cwd) {
-  const isDefault = sessionId === DEFAULT_SESSION_ID;
   const session = {
     id: sessionId,
-    isDefault,
     cwd: cwd || '',
     displayName: deriveDisplayName(sessionId, cwd || ''),
     state: 'idle',
@@ -470,11 +464,10 @@ function countActiveSessions() {
 }
 
 function evictOldestSession() {
-  // Find the oldest non-default session by lastActivity. __default__ is
-  // exempt from eviction.
+  // Find the oldest session by lastActivity (lingering ones are excluded;
+  // they're already on their way out).
   let victim = null;
   for (const s of sessions.values()) {
-    if (s.isDefault) continue;
     if (s.endLingerTimer) continue;
     if (!victim || s.lastActivity < victim.lastActivity) victim = s;
   }
@@ -512,11 +505,6 @@ function destroySession(session) {
 
 function scheduleSessionEnd(session) {
   // SessionEnd: keep the mascot visible for a short beat, then destroy.
-  if (session.isDefault) {
-    // __default__ never goes away on SessionEnd; just mark idle.
-    setSessionState(session, 'idle', '');
-    return;
-  }
   if (session.endLingerTimer) return; // already ending
   setSessionState(session, 'idle', '');
   session.endLingerTimer = setTimeout(() => {
@@ -527,7 +515,6 @@ function scheduleSessionEnd(session) {
 function reapIdleSessions() {
   const now = Date.now();
   for (const s of [...sessions.values()]) {
-    if (s.isDefault) continue;
     if (s.endLingerTimer) continue;
     if (now - s.lastActivity >= SESSION_IDLE_TIMEOUT_MS) {
       console.log('[gaya] reaping idle session:', s.id);
@@ -549,10 +536,6 @@ function stopSessionReaper() {
 }
 
 // ---- Per-session helpers ----
-
-function getDefaultSession() {
-  return sessions.get(DEFAULT_SESSION_ID) || null;
-}
 
 // Y target = workArea bottom (mascot stands on the dock/edge).
 function computeFloorY(session) {
@@ -703,7 +686,6 @@ function sendSessionInfo(session) {
   if (!win || win.isDestroyed()) return;
   const payload = {
     sessionId: session.id,
-    isDefault: session.isDefault,
     displayName: session.displayName || '',
     cwd: session.cwd || '',
   };
@@ -712,6 +694,20 @@ function sendSessionInfo(session) {
   // robust against race conditions, also stash for replay on renderer-ready.
   session.pendingSessionInfo = payload;
   win.webContents.send('session-info', payload);
+}
+
+// Push the current global bubble-position override to a single session window.
+// 'auto' tells the renderer to fall back to the active pack's manifest anchor.
+function sendBubblePosition(session) {
+  const win = session.window;
+  if (!win || win.isDestroyed()) return;
+  win.webContents.send('bubble-position', { position: bubblePosition });
+}
+
+function broadcastBubblePosition() {
+  for (const s of sessions.values()) {
+    sendBubblePosition(s);
+  }
 }
 
 // ---- Movement loop (single global timer) ----
@@ -896,19 +892,13 @@ function toggleAllMascots() {
 // ---- Reset positions ----
 
 function resetAllWindowPositions() {
-  // Re-lay out every active session from the right edge, in insertion order.
-  // __default__ sits at slot 0 (right-most), then non-default sessions.
+  // Re-lay out every active session from the right edge, newest first.
   const { workArea } = screen.getPrimaryDisplay();
   const usable = workArea.width - WIN_MARGIN * 2;
   const perRow = Math.max(1, Math.floor(usable / SESSION_X_STRIDE));
 
-  // Layout order: __default__ first, then others by lastActivity desc (newest first).
-  const ordered = [];
-  const def = getDefaultSession();
-  if (def && !def.endLingerTimer) ordered.push(def);
-  const others = [...sessions.values()].filter((s) => !s.isDefault && !s.endLingerTimer);
-  others.sort((a, b) => b.lastActivity - a.lastActivity);
-  for (const s of others) ordered.push(s);
+  const ordered = [...sessions.values()].filter((s) => !s.endLingerTimer);
+  ordered.sort((a, b) => b.lastActivity - a.lastActivity);
 
   ordered.forEach((s, slot) => {
     const win = s.window;
@@ -1007,9 +997,10 @@ function updateTrayForAggregate() {
   const activeCount = countActiveSessions();
   const title = activeCount > 1 ? `${emoji}×${activeCount}` : emoji;
   tray.setTitle(title);
-  const tip = activeCount === 1
-    ? `gaya · ${agg}`
-    : `gaya · ${activeCount} sessions · ${agg}`;
+  let tip;
+  if (activeCount === 0) tip = 'gaya · idle (no sessions)';
+  else if (activeCount === 1) tip = `gaya · ${agg}`;
+  else tip = `gaya · ${activeCount} sessions · ${agg}`;
   tray.setToolTip(tip);
 }
 
@@ -1054,18 +1045,18 @@ function rebuildTrayMenu() {
     },
   ];
 
-  // Sessions submenu: list all active sessions as info-only items.
+  const bubblePositionSubmenu = [
+    { label: 'Auto (pack default)', type: 'radio', checked: bubblePosition === 'auto', click: () => setBubblePosition('auto') },
+    { label: 'Top right', type: 'radio', checked: bubblePosition === 'top-right', click: () => setBubblePosition('top-right') },
+    { label: 'Top left', type: 'radio', checked: bubblePosition === 'top-left', click: () => setBubblePosition('top-left') },
+    { label: 'Top', type: 'radio', checked: bubblePosition === 'top', click: () => setBubblePosition('top') },
+  ];
+
+  // Sessions submenu: list all active sessions as info-only items, newest first.
   const sessionEntries = [];
-  // __default__ first if present.
-  const def = getDefaultSession();
-  if (def && !def.endLingerTimer) {
-    const label = def.displayName ? `${def.displayName} · ${def.state}` : `(default) · ${def.state}`;
-    sessionEntries.push({ label, enabled: false });
-  }
-  // Then other active sessions, newest first.
-  const others = [...sessions.values()].filter((s) => !s.isDefault && !s.endLingerTimer);
-  others.sort((a, b) => b.lastActivity - a.lastActivity);
-  for (const s of others) {
+  const activeSessions = [...sessions.values()].filter((s) => !s.endLingerTimer);
+  activeSessions.sort((a, b) => b.lastActivity - a.lastActivity);
+  for (const s of activeSessions) {
     const name = s.displayName || s.id.slice(0, 8);
     sessionEntries.push({ label: `${name} · ${s.state}`, enabled: false });
   }
@@ -1096,6 +1087,7 @@ function rebuildTrayMenu() {
     },
     { label: 'Pack Preview…', click: () => openPreviewWindow() },
     { label: 'Movement', submenu: movementSubmenu },
+    { label: 'Bubble Position', submenu: bubblePositionSubmenu },
     { label: 'Reset Position', click: () => resetAllWindowPositions() },
     {
       label: `Click-through: ${clickThrough ? 'ON' : 'OFF'}`,
@@ -1105,8 +1097,16 @@ function rebuildTrayMenu() {
     {
       label: 'Toggle DevTools',
       click: () => {
-        const target = getDefaultSession();
-        if (!target || !target.window || target.window.isDestroyed()) return;
+        // Open DevTools on the first available session window. No-op if no
+        // sessions are active yet.
+        let target = null;
+        for (const s of sessions.values()) {
+          if (s.window && !s.window.isDestroyed()) {
+            target = s;
+            break;
+          }
+        }
+        if (!target) return;
         const wc = target.window.webContents;
         if (wc.isDevToolsOpened()) wc.closeDevTools();
         else wc.openDevTools({ mode: 'detach' });
@@ -1225,6 +1225,14 @@ function setMovementStyle(value) {
   rebuildTrayMenu();
 }
 
+function setBubblePosition(value) {
+  if (!VALID_BUBBLE_POSITION.has(value)) return;
+  bubblePosition = value;
+  saveSettings();
+  broadcastBubblePosition();
+  rebuildTrayMenu();
+}
+
 // ---- HTTP server ----
 
 function startHttpServer() {
@@ -1257,9 +1265,12 @@ function startHttpServer() {
               return;
             }
             const message = typeof parsed.message === 'string' ? parsed.message : '';
-            const rawSessionId = typeof parsed.session_id === 'string' && parsed.session_id.trim()
-              ? parsed.session_id.trim()
-              : DEFAULT_SESSION_ID;
+            const rawSessionId = typeof parsed.session_id === 'string' ? parsed.session_id.trim() : '';
+            if (!rawSessionId) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: false, error: 'session_id required' }));
+              return;
+            }
             const cwd = typeof parsed.cwd === 'string' ? parsed.cwd : '';
 
             const isSessionEnd = !!parsed.session_end || parsed.event === 'SessionEnd';
@@ -1309,19 +1320,10 @@ app.whenReady().then(async () => {
   activePackId = pickDefaultPack(availablePacks);
   createTray();
 
-  // Always create the default session so single-curl tests still work.
-  const def = createSession(DEFAULT_SESSION_ID, '');
-  sessions.set(DEFAULT_SESSION_ID, def);
-
-  // Start the movement loop after the default window is shown.
-  if (def.window) {
-    def.window.once('ready-to-show', () => {
-      startMovementLoopIfNeeded();
-    });
-  } else {
-    // Defensive: window creation failed; still start the loop (no-op).
-    startMovementLoopIfNeeded();
-  }
+  // No mascot windows at startup — they spawn lazily when the first hook POST
+  // arrives with a session_id. Start the movement loop now; it tolerates an
+  // empty sessions map and does nothing until a session is created.
+  startMovementLoopIfNeeded();
 
   startSessionReaper();
 
@@ -1371,6 +1373,9 @@ ipcMain.on('renderer-ready', (event) => {
   session.readyForState = true;
   // Send session info so the renderer can show its label.
   sendSessionInfo(session);
+  // Push the current global bubble-position override so the renderer can
+  // pick it over the pack's manifest anchor on first paint.
+  sendBubblePosition(session);
   // Then send (or replay) the current state.
   sendStateToSession(session);
 });

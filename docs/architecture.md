@@ -16,20 +16,22 @@
 
 - Tries ports `39999..40010`, first free wins. The chosen port is logged at startup.
 - Endpoint: `POST /state`
-- Payload (all fields except `state` are optional):
+- Payload (`state` and `session_id` are required; the rest are optional):
 
   ```json
   {
     "state": "working",
-    "message": "optional bubble text",
     "session_id": "abc123",
+    "message": "optional bubble text",
     "cwd": "/path/to/project",
     "session_end": true,
     "event": "SessionEnd"
   }
   ```
 
-- `state` must be one of the base states (see below). Empty/missing `session_id` routes to the `__default__` session. `session_end: true` or `event: "SessionEnd"` plays a 2.5 s farewell, then destroys the window.
+- `state` must be one of the base states (see below).
+- `session_id` is required. A missing or empty value is rejected with `400 { ok: false, error: "session_id required" }`.
+- `session_end: true` or `event: "SessionEnd"` plays a 2.5 s farewell, then destroys the window.
 
 ## State machine
 
@@ -44,11 +46,11 @@ The Tray title shows an emoji that reflects the **aggregate** state across all s
 
 ## Sessions
 
-- Keyed by `session_id`. The empty/missing key maps to a special `__default__` session that is **never** evicted.
-- Cap: 6 concurrent sessions (including `__default__`).
-- Reaper: runs every 60 s, evicts non-default sessions idle for 15 minutes.
+- Keyed by `session_id`. No mascot windows exist at startup; each session is created lazily on the first POST that supplies its id.
+- Cap: 6 concurrent sessions. When a 7th arrives, the session with the oldest `lastActivity` is evicted.
+- Reaper: runs every 60 s, evicts sessions idle for 15 minutes.
 - `session_end` triggers a 2.5 s farewell animation and then destroys the window.
-- `session-info` IPC carries `{sessionId, isDefault, displayName, cwd}` to the renderer for display.
+- `session-info` IPC carries `{sessionId, displayName, cwd}` to the renderer. The renderer does **not** show a permanent session label; instead, while the mouse hovers the mascot, the speech-bubble text is temporarily replaced with the truncated `displayName`. When `displayName` is empty the hover swap is suppressed and the bubble keeps showing state text.
 
 ## Window layout
 
@@ -69,7 +71,8 @@ All channels live on `preload.js` and are fanned out from `main.js`. Channel nam
 | `switch-pack` | `packId` | Sent to all mascot windows on Tray pack change. |
 | `movement` | `{walking, direction}` | `direction` is `'left'` or `'right'`. |
 | `overlay` | `{overlay}` | `overlay` is one of `'dragging' \| 'falling' \| 'landed' \| null`. |
-| `session-info` | `{sessionId, isDefault, displayName, cwd}` | Sent once after `renderer-ready`. |
+| `session-info` | `{sessionId, displayName, cwd}` | Sent once after `renderer-ready`. |
+| `bubble-position` | `{position}` | Global bubble-anchor override. `position` is one of `'auto' \| 'top-right' \| 'top-left' \| 'top'`. `'auto'` defers to the active pack's `manifest.bubble.anchor`. Sent once after `renderer-ready` and again on every Tray → Bubble Position change. |
 | `preview:pack-changed` | `{packId}` | Preview window only. Fired by file watcher. |
 
 ### Renderer → main
@@ -111,6 +114,7 @@ Persisted keys:
 
 - `movementWhen` (`always | idle | off`)
 - `movementStyle` (`random | pacing`)
+- `bubblePosition` (`auto | top-right | top-left | top`; `auto` defers to the active pack's `manifest.bubble.anchor`, anything else overrides every session window)
 - `clickThrough` (boolean)
 - `externalPackPaths` (array of absolute folder paths registered via Tray → "Add Pack from Folder…"; missing paths at startup are logged and skipped silently, but kept in the file so the registration survives a temporarily-unavailable disk)
 

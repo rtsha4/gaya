@@ -35,7 +35,7 @@ npm run install-hooks
 npm start
 ```
 
-`npm install` の postinstall で `lottie-web` の UMD ビルドが `renderer/vendor/lottie.min.js` に配置されます（Lottie パック用）。`npm start` を実行すると、メインディスプレイ右下にデフォルトのマスコットが現れます。Dock アイコンは出ず、メニューバーの絵文字（`🤖` など）から制御します。
+`npm install` の postinstall で `lottie-web` の UMD ビルドが `renderer/vendor/lottie.min.js` に配置されます（Lottie パック用）。`npm start` を実行するとメニューバーに gaya の絵文字（`🤖` など）が常駐し、Dock アイコンは出ません。**マスコット窓は起動直後には 0 個**です — hooks から最初の POST が届いた時点で、その `session_id` 用のウィンドウが画面右下に生成されます。
 
 別ターミナルで Claude Code を起動すれば、その session_id 用に新しいマスコットが追加され、hooks 経由で状態が反映されます。
 
@@ -47,27 +47,27 @@ npm start
 # サーバーが起動しているか
 curl http://127.0.0.1:39999/health
 
-# デフォルトマスコットを動かす（session_id 省略 → __default__ 宛）
+# 仮想セッションを spawn（マスコットが画面右下に出現）
 curl -X POST -H 'Content-Type: application/json' \
-  -d '{"state":"thinking"}' \
+  -d '{"state":"thinking","session_id":"demo","cwd":"/tmp/demo"}' \
   http://127.0.0.1:39999/state
 
 curl -X POST -H 'Content-Type: application/json' \
-  -d '{"state":"working"}' \
+  -d '{"state":"working","session_id":"demo"}' \
   http://127.0.0.1:39999/state
 
-# 仮想セッションを spawn（左隣にマスコットが増える）
+# 別の仮想セッションを spawn（左隣にマスコットが増える）
 curl -X POST -H 'Content-Type: application/json' \
-  -d '{"state":"working","session_id":"demo","cwd":"/tmp/demo"}' \
+  -d '{"state":"working","session_id":"demo2","cwd":"/tmp/demo2"}' \
   http://127.0.0.1:39999/state
 
-# その仮想セッションを終了（2.5s 余韻のあとウィンドウ破棄）
+# 最初のセッションを終了（2.5s 余韻のあとウィンドウ破棄）
 curl -X POST -H 'Content-Type: application/json' \
   -d '{"state":"idle","session_id":"demo","session_end":true}' \
   http://127.0.0.1:39999/state
 ```
 
-有効な state は `idle` / `thinking` / `working` / `waiting` / `done` / `error`。`done` は約 2.5 秒で自動的に `idle` へ戻ります。
+有効な state は `idle` / `thinking` / `working` / `waiting` / `done` / `error`。`done` は約 2.5 秒で自動的に `idle` へ戻ります。`session_id` が空 / 未指定の POST は `400 { ok:false, error:"session_id required" }` で拒否されます。
 
 ---
 
@@ -95,7 +95,7 @@ curl -X POST -H 'Content-Type: application/json' \
 ```
 
 - `state` 必須（無効値は 400）。
-- `session_id` を省略すると `__default__` セッションへルーティング。
+- `session_id` 必須。空 / 未指定は `400 { ok:false, error:"session_id required" }`。
 - `cwd` の basename がマスコット下のラベルになる。
 - `session_end: true`（または `event: "SessionEnd"`）でそのマスコットを退去させる。
 
@@ -123,9 +123,9 @@ echo '{"session_id":"abc123","cwd":"/tmp/proj","tool_name":"Bash"}' \
 ### マルチセッション
 
 - 1 セッション 1 マスコット。`session_id` ごとに専用の透明ウィンドウが立ち上がる。
-- 起動時に常設の `__default__` セッション（ラベルなし、退去しない）が必ず存在し、`session_id` を持たない POST はここに入る。
-- 同時表示の上限は **6 体**。7 体目が来ると、`__default__` を除く中で最も古いセッションが退去させられる。
-- **15 分**活動が無いセッションは自動退去（1 分間隔でチェック、`__default__` は対象外）。
+- 起動直後はマスコット 0 個。Tray のみ常駐し、最初の POST が届いた時点でその `session_id` 用のウィンドウが生成される。
+- 同時表示の上限は **6 体**。7 体目が来ると、最も古いセッション（`lastActivity` が最古）が退去させられる。
+- **15 分**活動が無いセッションは自動退去（1 分間隔でチェック）。
 - `SessionEnd` 受信後はおよそ **2.5 秒**だけ表示を残し、その後ウィンドウを破棄。
 - マスコット下に `cwd` の basename を表示（最大 16 文字、超過は `…` で省略）。
 - レイアウトは右下から左へ 220px 間隔で並び、横幅が足りなくなると上の段へ折り返す。
@@ -189,7 +189,7 @@ echo '{"session_id":"abc123","cwd":"/tmp/proj","tool_name":"Bash"}' \
 | `Movement` | When / Style の切替 |
 | `Reset Position` | 全マスコットを画面右下から再配置 |
 | `Click-through: ON/OFF` | クリック透過の切替（マスコット背後のアイコン等を操作したい時に） |
-| `Toggle DevTools` | デフォルトセッションのウィンドウで DevTools を開閉 |
+| `Toggle DevTools` | 最初に見つかったセッションのウィンドウで DevTools を開閉（セッション 0 個のときは無反応） |
 | `Quit` | アプリ終了 |
 
 `Character` / `Movement` / `Reset Position` / `Click-through` / `Show / Hide` は **全マスコットに一括適用**されます（v1 ではセッション単位での操作は未提供）。
